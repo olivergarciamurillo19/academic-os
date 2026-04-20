@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+  DO_NOT_TRACK: "1"
+  # Dummy env vars so Next.js build doesn't crash reading runtime config.
+  NEXT_PUBLIC_SUPABASE_URL: "https://ci.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-anon-key"
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+  OPENAI_API_KEY: "sk-ci"
+  ANTHROPIC_API_KEY: "sk-ant-ci"
+
+jobs:
+  verify:
+    name: Typecheck · Lint · Test · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Cache .turbo
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            **/.turbo
+            apps/web/.next/cache
+          key: turbo-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref_name }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm turbo run typecheck --cache-dir=.turbo
+
+      - name: Lint
+        run: pnpm turbo run lint --cache-dir=.turbo
+
+      - name: Test
+        run: pnpm turbo run test --cache-dir=.turbo
+
+      - name: Build
+        run: pnpm turbo run build --cache-dir=.turbo

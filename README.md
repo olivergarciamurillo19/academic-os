@@ -1,5 +1,8 @@
 # Academic OS
 
+[![CI](https://github.com/olivergarciamurillo19/academic-os/actions/workflows/ci.yml/badge.svg)](https://github.com/olivergarciamurillo19/academic-os/actions/workflows/ci.yml)
+[![DB check](https://github.com/olivergarciamurillo19/academic-os/actions/workflows/db-check.yml/badge.svg)](https://github.com/olivergarciamurillo19/academic-os/actions/workflows/db-check.yml)
+
 Sistema operativo académico para estudiantes. Next.js 15 · TypeScript · Supabase · Drizzle · Tailwind v4 · shadcn/ui.
 
 El blueprint de producto y arquitectura vive en [`ACADEMIC_OS.md`](./ACADEMIC_OS.md).

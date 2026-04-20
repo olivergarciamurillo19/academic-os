@@ -1,0 +1,84 @@
+name: DB migrations check
+
+on:
+  pull_request:
+    paths:
+      - "packages/db/migrations/**"
+      - "packages/db/src/schema/**"
+      - "packages/db/drizzle.config.ts"
+      - ".github/workflows/db-check.yml"
+
+concurrency:
+  group: db-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrations:
+    name: Drizzle migrate + check on shadow DB
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shadow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/shadow"
+      SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/shadow"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U postgres; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+
+      - name: Enable required extensions
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d shadow \
+            -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";' \
+            -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto";' \
+            -c 'CREATE EXTENSION IF NOT EXISTS "vector";' || true
+
+      - name: Apply migrations (forward)
+        working-directory: packages/db
+        run: pnpm drizzle-kit migrate
+
+      - name: Drizzle check (consistency)
+        working-directory: packages/db
+        run: pnpm drizzle-kit check
+
+      - name: Verify tables were created
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d shadow -c '\dt public.*' || true
