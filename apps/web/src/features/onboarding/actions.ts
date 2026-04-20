@@ -4,6 +4,7 @@ import {
   cohorts,
   db,
   degreePrograms,
+  integrations,
   memberships,
   subjectMembers,
   subjects,
@@ -16,6 +17,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getSessionUser } from "@/lib/auth";
+import { inngest } from "@/lib/inngest";
 
 import {
   clearOnboardingState,
@@ -78,6 +80,9 @@ function currentPeriod(now: Date = new Date()): "1Q" | "2Q" {
 export async function completeOnboarding(formData: FormData): Promise<void> {
   const selectedSubjectIds = formData.getAll("subjects").map(String);
   step3Schema.parse({ selectedSubjectIds });
+
+  const rawIcal = String(formData.get("icalUrl") ?? "").trim();
+  const icalUrl = rawIcal.length > 0 ? rawIcal.replace(/^webcal:\/\//i, "https://") : null;
 
   const current = await readOnboardingState();
   await writeOnboardingState({ ...current, selectedSubjectIds, step: 3 });
@@ -187,7 +192,53 @@ export async function completeOnboarding(formData: FormData): Promise<void> {
     }
   }
 
-  // 5. Set active_cohort_id cookie so middleware lets /dashboard through.
+  // 5. Optional iCal — save + trigger immediate sync.
+  if (icalUrl && /^https?:\/\//i.test(icalUrl)) {
+    try {
+      const existing = await db.query.integrations.findFirst({
+        where: and(
+          eq(integrations.userId, session.user.id),
+          eq(integrations.provider, "ical_url"),
+        ),
+      });
+      let integrationId: string;
+      if (existing) {
+        integrationId = existing.id;
+        await db
+          .update(integrations)
+          .set({
+            isActive: true,
+            metadata: { ...(existing.metadata ?? {}), url: icalUrl },
+          })
+          .where(eq(integrations.id, existing.id));
+      } else {
+        const [inserted] = await db
+          .insert(integrations)
+          .values({
+            userId: session.user.id,
+            provider: "ical_url",
+            metadata: { url: icalUrl },
+            isActive: true,
+          })
+          .returning({ id: integrations.id });
+        integrationId = inserted?.id ?? "";
+      }
+      if (integrationId && process.env.INNGEST_EVENT_KEY) {
+        await inngest
+          .send({
+            name: "ical.sync.requested",
+            data: { userId: session.user.id, integrationId },
+          })
+          .catch((err: unknown) => {
+            console.warn("[onboarding] ical inngest.send failed:", err);
+          });
+      }
+    } catch (err) {
+      console.warn("[onboarding] ical setup failed:", err);
+    }
+  }
+
+  // 6. Set active_cohort_id cookie so middleware lets /dashboard through.
   const store = await cookies();
   store.set({
     name: "active_cohort_id",

@@ -55,6 +55,8 @@ export default async function OnboardingStep3() {
           picked={picked}
         />
 
+        <IcalOptionalField />
+
         <div className="flex items-center justify-between">
           <Button asChild variant="ghost">
             <Link href={{ pathname: "/onboarding/step-2" }}>Atrás</Link>
@@ -65,6 +67,33 @@ export default async function OnboardingStep3() {
         </div>
       </form>
     </div>
+  );
+}
+
+function IcalOptionalField() {
+  return (
+    <details className="rounded-md border p-4">
+      <summary className="cursor-pointer text-sm font-medium">
+        ¿Tienes URL iCal del aula virtual? (opcional)
+      </summary>
+      <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
+        <p>
+          Si pegas la URL ahora, importamos tu calendario de Blackboard automáticamente.
+          Podrás cambiarla o desconectarla luego en Ajustes → Integraciones.
+        </p>
+        <ol className="list-decimal space-y-1 pl-5 text-xs">
+          <li>Blackboard UAL → Calendario → engranaje (⚙).</li>
+          <li>Pulsa “Suscribirse al calendario”. Copia la URL <code className="rounded bg-muted px-1">webcal://…</code></li>
+          <li>Pégala aquí. La sincronización se lanza al terminar.</li>
+        </ol>
+        <input
+          type="url"
+          name="icalUrl"
+          placeholder="webcal://blackboard.ual.es/…"
+          className="mt-1 rounded-md border bg-background px-3 py-2 text-sm"
+        />
+      </div>
+    </details>
   );
 }
 
