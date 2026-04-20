@@ -12,6 +12,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { inngest } from "@/lib/inngest";
 import { getServiceRoleSupabase, hasServiceRoleKey } from "@/lib/supabase-admin";
+
 import {
   ACCEPTED_MIME_TYPES,
   MAX_RESOURCE_BYTES,
@@ -203,7 +204,12 @@ export async function uploadResource(
     return { ok: true, record };
   } catch (err) {
     // Roll back the uploaded file so the storage doesn't drift from the DB.
-    await admin.storage.from("materials").remove([storagePath]).catch(() => {});
+    await admin.storage
+      .from("materials")
+      .remove([storagePath])
+      .catch((removeErr) => {
+        console.warn("[materials.upload] storage rollback failed:", removeErr);
+      });
     console.error("[materials.upload] db insert failed:", err);
     return { ok: false, reason: "db", message: "No se pudo registrar el recurso." };
   }
@@ -324,7 +330,7 @@ export async function getResourceSignedUrl(
       isNull(resources.deletedAt),
     ),
   });
-  if (!row || !row.storagePath) {
+  if (!row?.storagePath) {
     return { ok: false, message: "Recurso no encontrado." };
   }
 

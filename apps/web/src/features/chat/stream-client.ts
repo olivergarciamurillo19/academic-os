@@ -15,13 +15,44 @@
 export interface StreamChatParams {
   subjectId: string;
   conversationId?: string;
+  topicId?: string;
   message: string;
   onDelta: (accumulatedText: string) => void;
 }
 
+export interface StreamCitation {
+  chunkId: string;
+  snippet: string;
+  resourceId: string;
+  resourceTitle: string | null;
+  pageFrom: number | null;
+  pageTo: number | null;
+}
+
 export type StreamChatResult =
-  | { ok: true; text: string; conversationId: string | null }
+  | {
+      ok: true;
+      text: string;
+      conversationId: string | null;
+      citations: StreamCitation[];
+    }
   | { ok: false; status: number; error: string };
+
+function decodeCitationsHeader(raw: string | null): StreamCitation[] {
+  if (!raw) return [];
+  try {
+    const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(b64);
+    const parsed: unknown = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (c: unknown): c is StreamCitation =>
+        typeof c === "object" && c !== null && "chunkId" in c,
+    );
+  } catch {
+    return [];
+  }
+}
 
 export async function streamChat(params: StreamChatParams): Promise<StreamChatResult> {
   let response: Response;
@@ -32,6 +63,7 @@ export async function streamChat(params: StreamChatParams): Promise<StreamChatRe
       body: JSON.stringify({
         subjectId: params.subjectId,
         conversationId: params.conversationId,
+        topicId: params.topicId,
         message: params.message,
       }),
     });
@@ -63,5 +95,6 @@ export async function streamChat(params: StreamChatParams): Promise<StreamChatRe
     ok: true,
     text: acc,
     conversationId: response.headers.get("X-Conversation-Id"),
+    citations: decodeCitationsHeader(response.headers.get("X-Citations")),
   };
 }

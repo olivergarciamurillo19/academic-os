@@ -26,17 +26,17 @@ export default function LoginPage() {
     setPending(true);
     try {
       const supabase = getBrowserSupabase();
+      // Hard-pin the canonical app URL. If the user lands on a preview
+      // deployment the page origin would differ from the canonical alias
+      // in Supabase's Redirect URL allowlist, which rejects the link.
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://academic-os-mu.vercel.app";
       const { error } = await supabase.auth.signInWithOtp({
         email: trimmed,
         options: {
-          // Point at the /auth/confirm route handler so the magic link
-          // lands there and the server can call verifyOtp(). Supabase will
-          // append ?token_hash=…&type=… to this URL. Must match a
-          // Redirect URL in Supabase → Auth → URL Configuration.
-          emailRedirectTo:
-            typeof window !== "undefined"
-              ? `${window.location.origin}/auth/confirm`
-              : undefined,
+          // Points at /auth/confirm — the route handler that calls
+          // verifyOtp() and writes the session cookies. Must match a
+          // Redirect URL in Supabase → Auth → URL Configuration exactly.
+          emailRedirectTo: `${appUrl}/auth/confirm`,
         },
       });
       if (error) {
@@ -55,15 +55,13 @@ export default function LoginPage() {
       return;
     }
     const supabase = getBrowserSupabase();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://academic-os-mu.vercel.app";
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         // Route through /api/auth/callback which exchanges the PKCE code
         // for a session and then routes by membership state.
-        redirectTo:
-          typeof window !== "undefined"
-            ? `${window.location.origin}/api/auth/callback`
-            : undefined,
+        redirectTo: `${appUrl}/api/auth/callback`,
       },
     });
     if (error) toast.error(error.message);

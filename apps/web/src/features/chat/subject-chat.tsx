@@ -93,9 +93,16 @@ export function SubjectChat({ subject }: SubjectChatProps) {
         onDelta: (chunk) => patchMessage(convoId, assistantId, { content: chunk }),
       });
       if (result.ok) {
+        const citations = result.citations.map((c, i) => ({
+          id: i + 1,
+          resourceName: c.resourceTitle ?? "Apunte",
+          page: c.pageFrom ?? undefined,
+          resourceHref: `/subjects/${subject.id}/resources/${c.resourceId}`,
+        }));
         patchMessage(convoId, assistantId, {
           content: result.text,
           streaming: false,
+          citations: citations.length > 0 ? citations : undefined,
         });
       } else {
         const fallback = mockAnswer(subject.name);

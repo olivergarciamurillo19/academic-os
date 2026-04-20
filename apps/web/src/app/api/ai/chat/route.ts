@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 
 import { getSessionUser } from "@/lib/auth";
+import { formatContextForPrompt, retrieveChunks, type RetrievedChunk } from "@/lib/rag";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 const chatBodySchema = z.object({
   conversationId: z.string().uuid().optional(),
   subjectId: z.string().uuid(),
+  topicId: z.string().uuid().optional(),
   message: z.string().min(1).max(8000),
 });
 
@@ -18,9 +20,19 @@ const chatBodySchema = z.object({
 // OpenAI until an ANTHROPIC_API_KEY lands. Model choice is env-configurable.
 const OPENAI_MODEL = process.env.OPENAI_CHAT_MODEL ?? "gpt-4o-mini";
 const MAX_TOKENS = 1500;
+const HISTORY_WINDOW = 12;
 
-const SYSTEM_PROMPT = (subjectName: string): string =>
-  `Eres un tutor académico del alumno para la asignatura "${subjectName}" en la Universidad de Almería. Responde en español, con explicaciones claras y ejemplos numéricos cuando apliquen. Usa Markdown: negritas para términos clave, listas para pasos, bloques de código para notación. Si no estás seguro, dilo.`;
+function systemPrompt(subjectName: string, context: string): string {
+  const base = `Eres un tutor académico del alumno para la asignatura "${subjectName}" en la Universidad de Almería. Responde en español, con explicaciones claras y ejemplos numéricos cuando apliquen. Usa Markdown: negritas para términos clave, listas para pasos, bloques de código para notación. Si no estás seguro, dilo.`;
+  if (context.length === 0) return base;
+  return `${base}
+
+Dispones de los siguientes extractos de los apuntes y materiales del alumno. Úsalos como fuente principal. Cuando los uses, cita con [n] (ej. [1] [3]) al final de la frase relevante. Si ninguno responde la pregunta, dilo claramente y responde con conocimiento general.
+
+--- CONTEXTO ---
+${context}
+--- FIN CONTEXTO ---`;
+}
 
 export async function POST(request: Request): Promise<Response> {
   const session = await getSessionUser();
@@ -38,8 +50,6 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // Verify the subject exists. RLS enforces ownership; this is just an
-  // early exit with a nicer 404 than a 500.
   const subjectRow = await db
     .select({ id: subjectsTable.id, name: subjectsTable.name })
     .from(subjectsTable)
@@ -50,7 +60,23 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Subject not found" }, { status: 404 });
   }
 
-  // Upsert conversation.
+  // ── Retrieve context chunks (hybrid search) ───────────────────────────────
+  const retrieved: RetrievedChunk[] = await retrieveChunks({
+    query: parsed.message,
+    subjectId: parsed.subjectId,
+    topicId: parsed.topicId,
+  });
+  const context = formatContextForPrompt(retrieved);
+  const citations = retrieved.map((c) => ({
+    chunkId: c.chunkId,
+    snippet: c.content.slice(0, 240),
+    resourceId: c.resourceId,
+    resourceTitle: c.resourceTitle,
+    pageFrom: c.pageFrom,
+    pageTo: c.pageTo,
+  }));
+
+  // ── Upsert conversation ───────────────────────────────────────────────────
   let conversationId = parsed.conversationId ?? null;
   if (!conversationId) {
     const [created] = await db
@@ -67,19 +93,20 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Could not create conversation" }, { status: 500 });
   }
 
-  // Persist user turn.
   await db.insert(messages).values({
     conversationId,
     role: "user",
     content: { text: parsed.message },
   });
 
-  // Load history.
-  const history = await db
+  // Load last N turns for memory (ascending by createdAt, then keep tail).
+  const allHistory = await db
     .select({ role: messages.role, content: messages.content })
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
     .orderBy(asc(messages.createdAt));
+
+  const history = allHistory.slice(-HISTORY_WINDOW);
 
   const openaiHistory: { role: "user" | "assistant"; content: string }[] = history
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -94,7 +121,7 @@ export async function POST(request: Request): Promise<Response> {
   const apiKey = process.env.OPENAI_API_KEY;
   const encoder = new TextEncoder();
 
-  // ── Mock path when OPENAI_API_KEY is missing ─────────────────────────────
+  // ── Mock path ─────────────────────────────────────────────────────────────
   if (!apiKey) {
     const mock = `_(modo mock — falta \`OPENAI_API_KEY\` en este entorno)._
 
@@ -122,19 +149,20 @@ Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quier
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "X-Conversation-Id": conversationId,
+        "X-Citations": citations.length > 0 ? encodeCitationsHeader(citations) : "",
         "Cache-Control": "no-store",
       },
     });
   }
 
-  // ── Real OpenAI streaming ────────────────────────────────────────────────
+  // ── Real OpenAI streaming ─────────────────────────────────────────────────
   const openai = new OpenAI({ apiKey });
   const openaiStream = await openai.chat.completions.create({
     model: OPENAI_MODEL,
     stream: true,
     max_tokens: MAX_TOKENS,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT(subject.name) },
+      { role: "system", content: systemPrompt(subject.name, context) },
       ...openaiHistory,
     ],
     stream_options: { include_usage: true },
@@ -167,6 +195,7 @@ Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quier
         conversationId,
         role: "assistant",
         content: { text: fullText },
+        citations: citations.length > 0 ? citations : null,
         model: OPENAI_MODEL,
         tokenUsage: { input: inputTokens, output: outputTokens },
       });
@@ -185,7 +214,23 @@ Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quier
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "X-Conversation-Id": conversationId,
+      "X-Citations": citations.length > 0 ? encodeCitationsHeader(citations) : "",
       "Cache-Control": "no-store",
     },
   });
+}
+
+function encodeCitationsHeader(
+  citations: {
+    chunkId: string;
+    snippet: string;
+    resourceId: string;
+    resourceTitle: string | null;
+    pageFrom: number | null;
+    pageTo: number | null;
+  }[],
+): string {
+  // Base64url-encode the JSON so HTTP header rules (token-only chars) hold.
+  const json = JSON.stringify(citations);
+  return Buffer.from(json, "utf8").toString("base64url");
 }
