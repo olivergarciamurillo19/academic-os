@@ -1,13 +1,11 @@
 "use client";
 
-import { Bell, LogOut, Search, Settings, User } from "lucide-react";
+import { LogOut, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/brand/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import { NotificationsBell } from "./notifications-bell";
 
 interface ShellUser {
   name: string;
@@ -31,8 +31,6 @@ const mockUser: ShellUser = {
 };
 
 export function TopBar() {
-  const [unreadCount] = useState(0);
-
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="flex h-14 items-center gap-3 px-4 md:px-6">
@@ -45,17 +43,7 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-1 md:gap-2">
-          <Button variant="ghost" size="icon" aria-label="Notificaciones" className="relative">
-            <Bell className="h-4 w-4" />
-            {unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full px-1 text-[10px]"
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </Badge>
-            )}
-          </Button>
+          <NotificationsBell />
           <ThemeToggle />
           <UserMenu user={mockUser} />
         </div>
