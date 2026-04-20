@@ -1,0 +1,65 @@
+name: Feature request
+description: Propón una nueva funcionalidad o mejora de producto
+title: "[feat] "
+labels: ["type:feature", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por proponer una mejora. Rellena todos los campos para que el equipo pueda priorizar.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema / oportunidad
+      description: Qué problema resuelve esta feature o qué oportunidad explota. Evita describir la solución aquí.
+      placeholder: Como alumno, cuando subo un PDF no tengo forma de ver si se indexó correctamente...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+      description: Qué propones construir. Puede incluir bocetos, flujos o referencias.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación
+      description: Lista concreta de condiciones "Given / When / Then" o checklist.
+      placeholder: |
+        - [ ] Dado un usuario con PDFs subidos, al abrir Materiales ve el estado de indexación de cada uno.
+        - [ ] Al hacer clic en "Reintentar", el pipeline se reencola.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - "auth"
+        - "db / schema"
+        - "ai / rag"
+        - "ui / dashboard"
+        - "ingestion"
+        - "infra / ci"
+        - "extension"
+        - "otros"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad sugerida
+      options:
+        - "P0 - crítica"
+        - "P1 - alta"
+        - "P2 - normal"
+        - "P3 - nice to have"
+    validations:
+      required: true

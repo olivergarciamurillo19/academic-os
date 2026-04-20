@@ -1,0 +1,32 @@
+# CODEOWNERS — Academic OS
+#
+# Orden: la última regla que matchea manda. Ver
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/managing-repository-settings/about-code-owners
+
+# Dueño por defecto de todo el repo
+*                                 @olivergarciamurillo19
+
+# Paquetes core
+/packages/db/                     @olivergarciamurillo19
+/packages/auth/                   @olivergarciamurillo19
+/packages/ai/                     @olivergarciamurillo19
+/packages/email/                  @olivergarciamurillo19
+/packages/config-eslint/          @olivergarciamurillo19
+/packages/config-tailwind/        @olivergarciamurillo19
+/packages/config-ts/              @olivergarciamurillo19
+/packages/extension/              @olivergarciamurillo19
+
+# App principal
+/apps/web/                        @olivergarciamurillo19
+
+# Docs y blueprint
+/docs/                            @olivergarciamurillo19
+/ACADEMIC_OS.md                   @olivergarciamurillo19
+/README.md                        @olivergarciamurillo19
+
+# Infra / CI
+/.github/                         @olivergarciamurillo19
+/supabase/                        @olivergarciamurillo19
+/scripts/                         @olivergarciamurillo19
+/turbo.json                       @olivergarciamurillo19
+/pnpm-workspace.yaml              @olivergarciamurillo19

@@ -1,0 +1,51 @@
+name: Task / chore
+description: Trabajo técnico, refactor, deuda, infra o documentación
+title: "[task] "
+labels: ["type:task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objetivo
+      description: Qué hay que hacer y por qué ahora.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance
+      description: Qué entra y qué no entra en esta tarea.
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of Done
+      placeholder: |
+        - [ ] Cambio desplegado en preview
+        - [ ] Tests nuevos pasan
+        - [ ] Docs actualizados
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - "infra / ci"
+        - "db / migrations"
+        - "ai / rag"
+        - "ui / dashboard"
+        - "auth"
+        - "docs"
+        - "scripts / devex"
+        - "otros"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Issues / PRs relacionados
+      placeholder: "#12, #25"

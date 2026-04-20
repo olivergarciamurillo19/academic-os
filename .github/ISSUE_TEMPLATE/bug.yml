@@ -1,0 +1,74 @@
+name: Bug report
+description: Reportar un comportamiento incorrecto o un crash
+title: "[bug] "
+labels: ["type:bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ayúdanos a reproducir y arreglar el bug. Si es un crash en producción, incluye el link al evento de Sentry.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumen
+      description: Qué está pasando (1-2 frases).
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. Ir a /subjects
+        2. Pulsar "Subir material"
+        3. Seleccionar PDF de 30 MB
+        4. Observar error 500
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamiento real
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: Entorno
+      description: dev local / preview / producción (incluye deploy URL si aplica)
+      placeholder: producción - https://academic-os-mu.vercel.app
+    validations:
+      required: true
+
+  - type: input
+    id: sentry
+    attributes:
+      label: Sentry event URL (opcional)
+      placeholder: https://sentry.io/...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      render: shell
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Verificaciones previas
+      options:
+        - label: He comprobado que no hay un issue abierto duplicado
+          required: true
+        - label: He reproducido el bug en la última versión de `main` o del preview deploy
+          required: false
