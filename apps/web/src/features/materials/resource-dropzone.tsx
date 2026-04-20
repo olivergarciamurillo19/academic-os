@@ -5,6 +5,7 @@ import { useCallback, useRef, useState, type DragEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 import { uploadResource } from "./actions";
@@ -75,6 +76,15 @@ export function ResourceDropzone({ subjectId, topicKind }: ResourceDropzoneProps
 
           addResource(result.record, file);
           setActive((prev) => prev.filter((u) => u.id !== tempId));
+          track({
+            name: "resource_uploaded",
+            payload: {
+              subjectId,
+              topicKind,
+              mime: result.record.mimeType,
+              bytes: result.record.sizeBytes,
+            },
+          });
           toast.success(`Subido: ${file.name}`);
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Error desconocido";

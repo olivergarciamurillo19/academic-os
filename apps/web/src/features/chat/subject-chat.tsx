@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import type { MockSubject } from "@/features/subjects/mock-data";
+import { track } from "@/lib/analytics";
 
 import { ChatInput, type ChatInputHandle } from "./chat-input";
 import { useChatActions, useConversation, useConversations } from "./chat-store";
@@ -65,6 +66,10 @@ export function SubjectChat({ subject }: SubjectChatProps) {
       createdAtISO: new Date().toISOString(),
     };
     appendMessage(convoId, userMsg);
+    track({
+      name: "chat_message_sent",
+      payload: { subjectId: subject.id, characters: text.length },
+    });
 
     const assistantId = newMsgId();
     const assistantMsg: ChatMessage = {

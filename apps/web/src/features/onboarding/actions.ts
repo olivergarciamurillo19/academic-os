@@ -51,7 +51,8 @@ export async function completeOnboarding(formData: FormData): Promise<void> {
   await writeOnboardingState({ ...current, selectedSubjectIds, step: 3 });
 
   // TODO(backend): persist via Drizzle once Armando lands user_profile / enrollments tables.
-  // For now we simply clear the cookie and land the user on the dashboard.
+  // TODO(analytics): emit onboarding_completed from a client action wrapper,
+  // since server actions can't reach posthog-js. Tracked by Issue #25 follow-up.
   await clearOnboardingState();
 
   redirect("/dashboard");

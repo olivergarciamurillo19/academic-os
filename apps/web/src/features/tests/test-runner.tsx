@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { MockSubject } from "@/features/subjects/mock-data";
+import { track } from "@/lib/analytics";
 
 import { generateMockQuestions } from "./mock-generator";
 import { TestConfigForm } from "./test-config";
@@ -27,6 +28,15 @@ export function TestRunner({ subject }: { subject: MockSubject }) {
 
   function start(config: TestConfig) {
     const questions = generateMockQuestions(subject, config);
+    track({
+      name: "test_generated",
+      payload: {
+        subjectId: subject.id,
+        count: config.count,
+        difficulty: config.difficulty,
+        type: config.type,
+      },
+    });
     setPhase({
       kind: "running",
       config,
@@ -41,6 +51,15 @@ export function TestRunner({ subject }: { subject: MockSubject }) {
     const answers = Object.values(running.answers);
     const correctCount = answers.filter((a) => a.correct).length;
     const durationSeconds = Math.round((Date.now() - running.startedAt) / 1000);
+    track({
+      name: "test_completed",
+      payload: {
+        subjectId: subject.id,
+        correct: correctCount,
+        total: running.questions.length,
+        seconds: durationSeconds,
+      },
+    });
     setPhase({
       kind: "results",
       result: {

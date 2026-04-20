@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PostHogProvider } from "@/features/analytics/posthog-provider";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -39,7 +40,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+          <PostHogProvider>
+            <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+          </PostHogProvider>
           <Toaster />
         </ThemeProvider>
       </body>
