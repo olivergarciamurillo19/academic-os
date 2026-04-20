@@ -17,8 +17,6 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSessionUser } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 import {
   loadDashboardData,
   type CohortNotice,
@@ -28,6 +26,8 @@ import {
   type RecentConversation,
   type UpcomingEvent,
 } from "@/features/dashboard/queries";
+import { getSessionUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Inicio",

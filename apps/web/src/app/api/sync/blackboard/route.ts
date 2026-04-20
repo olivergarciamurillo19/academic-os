@@ -1,6 +1,6 @@
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,7 +93,7 @@ export async function POST(req: Request): Promise<Response> {
     at: new Date().toISOString(),
   };
 
-  console.log(JSON.stringify({ event: "blackboard.sync", ...summary }));
+  console.info(JSON.stringify({ event: "blackboard.sync", ...summary }));
 
   return NextResponse.json(
     {

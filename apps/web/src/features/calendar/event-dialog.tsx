@@ -121,14 +121,14 @@ export function EventDialog({
       description: nonEmpty(values.description),
       allDay: false,
     };
-    upsert(next);
+    void upsert(next);
     toast.success(event ? "Evento actualizado" : "Evento creado");
     onOpenChange(false);
   }
 
   function handleDelete() {
     if (!event) return;
-    remove(event.id);
+    void remove(event.id);
     toast.success("Evento eliminado");
     onOpenChange(false);
   }

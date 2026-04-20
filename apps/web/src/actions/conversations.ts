@@ -4,9 +4,9 @@ import { conversations, db, messages } from "@academic-os/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import type { ChatMessage, Conversation } from "@/features/chat/types";
 import { getSessionUser } from "@/lib/auth";
 
-import type { ChatMessage, Conversation } from "@/features/chat/types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,7 +22,7 @@ function rowToMessage(row: MsgRow): ChatMessage | null {
   if (row.role !== "user" && row.role !== "assistant") return null;
   const body = row.content as { text?: string } | null;
   const citations = Array.isArray(row.citations)
-    ? (row.citations as Array<{ chunkId?: string; snippet?: string }>).map(
+    ? (row.citations as { chunkId?: string; snippet?: string }[]).map(
         (c, i) => ({
           id: i + 1,
           resourceName: c.snippet ?? "Fuente",
@@ -165,7 +165,7 @@ export async function saveMessage(
     .from(conversations)
     .where(eq(conversations.id, parsed.conversationId))
     .limit(1);
-  if (!owner || owner.userId !== session.user.id) {
+  if (owner?.userId !== session.user.id) {
     throw new Error("Conversación no encontrada");
   }
   const [row] = await db

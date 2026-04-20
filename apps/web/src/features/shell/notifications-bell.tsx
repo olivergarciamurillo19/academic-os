@@ -47,16 +47,6 @@ export function NotificationsBell() {
   const [items, setItems] = useState<NotificationDto[]>([]);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLastSeen(localStorage.getItem(STORAGE_KEY));
-    void refresh();
-    // Refresh every 2 minutes while the tab is visible.
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 120_000);
-    return () => clearInterval(id);
-  }, []);
-
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/notifications", { cache: "no-store" });
@@ -67,6 +57,15 @@ export function NotificationsBell() {
       // Swallow — bell UI is non-critical.
     }
   }, []);
+
+  useEffect(() => {
+    setLastSeen(localStorage.getItem(STORAGE_KEY));
+    void refresh();
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 120_000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   const unread = lastSeen
     ? items.filter((i) => i.createdAt > lastSeen).length

@@ -1,9 +1,9 @@
 import "server-only";
 
 import { cohorts, db, memberships, users } from "@academic-os/db";
-import { desc, eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { desc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

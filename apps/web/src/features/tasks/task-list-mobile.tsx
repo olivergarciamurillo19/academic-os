@@ -61,7 +61,7 @@ export function TaskListMobile({ subjectId }: TaskListMobileProps) {
               onSwipe={(dir) => {
                 const next = nextStatus(task.status, dir);
                 if (next) {
-                  setStatus(task.id, next);
+                  void setStatus(task.id, next);
                   toast.success(`Movida a ${statusLabels[next]}`);
                 }
               }}

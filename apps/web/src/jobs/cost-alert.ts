@@ -1,7 +1,7 @@
 import { db } from "@academic-os/db";
-import { sql } from "drizzle-orm";
-import { DAILY_COST_THRESHOLD_EUR, estimateCostUsd, usdToEur, type ModelId } from "@academic-os/shared";
 import { resend } from "@academic-os/email";
+import { DAILY_COST_THRESHOLD_EUR, estimateCostUsd, usdToEur, type ModelId } from "@academic-os/shared";
+import { sql } from "drizzle-orm";
 
 import { inngest } from "../lib/inngest.js";
 

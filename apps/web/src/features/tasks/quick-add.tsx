@@ -20,7 +20,7 @@ export function QuickAdd({ status, defaultSubjectId }: QuickAddProps) {
   function submit() {
     const title = value.trim();
     if (title.length === 0) return;
-    create({
+    void create({
       title,
       subjectId: defaultSubjectId ?? null,
       status,

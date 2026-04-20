@@ -1,10 +1,10 @@
 "use server";
 
+import { db, integrations } from "@academic-os/db";
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { db, integrations } from "@academic-os/db";
 
 import { getSessionUser } from "@/lib/auth";
 import { inngest } from "@/lib/inngest";

@@ -7,9 +7,9 @@
  * top K rows are returned with enough metadata to build citations.
  */
 
+import { embedBatch } from "@academic-os/ai";
 import { client, db, resources } from "@academic-os/db";
 import { eq, inArray } from "drizzle-orm";
-import { embedBatch } from "@academic-os/ai";
 
 export interface RetrievedChunk {
   chunkId: string;

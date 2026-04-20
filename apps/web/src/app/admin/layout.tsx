@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 
-import { getSessionUser } from "@/lib/auth";
 import { BottomNav } from "@/features/shell/bottom-nav";
 import { LeftRail } from "@/features/shell/left-rail";
 import { TopBar } from "@/features/shell/top-bar";
+import { getSessionUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

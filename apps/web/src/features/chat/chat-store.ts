@@ -163,7 +163,7 @@ export function useChatActions(): {
       if (patch.streaming === false && UUID.test(conversationId)) {
         const conv = qc.getQueryData<Conversation | null>(detailKey(conversationId));
         const msg = conv?.messages.find((m) => m.id === messageId);
-        if (msg && msg.role === "assistant" && msg.content.length > 0) {
+        if (msg?.role === "assistant" && msg.content.length > 0) {
           void saveMessageAction({
             conversationId,
             role: "assistant",

@@ -4,7 +4,6 @@ import { Calendar, Link as LinkIcon, RefreshCw } from "lucide-react";
 import type { Metadata } from "next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
 import {
   getIcalIntegration,
   type IcalIntegrationState,

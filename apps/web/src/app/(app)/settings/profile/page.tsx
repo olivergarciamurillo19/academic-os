@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { ProfileForm } from "@/features/settings/profile-form";
 import { getProfile } from "@/features/settings/profile-actions";
+import { ProfileForm } from "@/features/settings/profile-form";
 
 export const metadata: Metadata = {
   title: "Perfil · Ajustes",

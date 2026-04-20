@@ -1,5 +1,5 @@
-import { db } from "@academic-os/db";
 import { ingestDocumentHandler } from "@academic-os/ai";
+import { db } from "@academic-os/db";
 import { z } from "zod";
 
 import { inngest } from "../lib/inngest.js";

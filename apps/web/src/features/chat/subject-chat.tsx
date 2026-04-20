@@ -67,7 +67,7 @@ export function SubjectChat({ subject }: SubjectChatProps) {
       content: text,
       createdAtISO: new Date().toISOString(),
     };
-    appendMessage(convoId!, userMsg);
+    appendMessage(convoId, userMsg);
     track({
       name: "chat_message_sent",
       payload: { subjectId: subject.id, characters: text.length },
@@ -81,7 +81,7 @@ export function SubjectChat({ subject }: SubjectChatProps) {
       createdAtISO: new Date().toISOString(),
       streaming: true,
     };
-    appendMessage(convoId!, assistantMsg);
+    appendMessage(convoId, assistantMsg);
 
     setStreamingLock(true);
     try {
@@ -132,7 +132,7 @@ export function SubjectChat({ subject }: SubjectChatProps) {
           onSelect={setActiveId}
           onNew={handleNew}
           onDelete={(id) => {
-            deleteConversation(id);
+            void deleteConversation(id);
             if (id === activeId) setActiveId(null);
           }}
         />
@@ -153,7 +153,7 @@ export function SubjectChat({ subject }: SubjectChatProps) {
                 onSelect={(id) => setActiveId(id)}
                 onNew={handleNew}
                 onDelete={(id) => {
-                  deleteConversation(id);
+                  void deleteConversation(id);
                   if (id === activeId) setActiveId(null);
                 }}
               />

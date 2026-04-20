@@ -56,7 +56,8 @@ export function AgendaView({ events, onSelectEvent }: AgendaViewProps) {
             </h3>
             <ul className="flex flex-col gap-2">
               {dayEvents.map((ev) => {
-                const color = (ev.subjectId && colorById.get(ev.subjectId)) || "oklch(0.6 0 0)";
+                const color =
+                  (ev.subjectId ? colorById.get(ev.subjectId) : null) ?? "oklch(0.6 0 0)";
                 return (
                   <li key={ev.id}>
                     <button

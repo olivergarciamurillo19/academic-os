@@ -35,7 +35,7 @@ export function useResources(subjectId: string, topicKind?: TopicKind): Resource
     // Poll while any document in the list is still being indexed so the
     // "indexado" badge updates without a manual refresh.
     refetchInterval: (q) => {
-      const data = q.state.data as ResourceRecord[] | undefined;
+      const data = q.state.data;
       const inFlight = (data ?? []).some(
         (r) =>
           r.documentStatus === "pending" || r.documentStatus === "processing",
@@ -67,7 +67,7 @@ export function useResourceActions(): {
 
   const removeMut = useMutation({
     mutationFn: async (resourceId: string) => deleteResourceAction(resourceId),
-    onMutate: async (resourceId) => {
+    onMutate: (resourceId) => {
       const keys = qc.getQueriesData<ResourceRecord[]>({ queryKey: ["resources"] });
       const rollback = keys.map(([key, list]) => {
         qc.setQueryData(

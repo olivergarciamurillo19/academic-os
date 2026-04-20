@@ -129,7 +129,7 @@ export function MonthView({ events, onSelectSlot, onSelectEvent }: MonthViewProp
                 <div className="flex flex-col gap-0.5">
                   {dayEvents.slice(0, 3).map((ev) => {
                     const color =
-                      (ev.subjectId && colorById.get(ev.subjectId)) || "oklch(0.6 0 0)";
+                      (ev.subjectId ? colorById.get(ev.subjectId) : null) ?? "oklch(0.6 0 0)";
                     return (
                       <span
                         key={ev.id}

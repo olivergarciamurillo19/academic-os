@@ -4,14 +4,14 @@ import { db, events } from "@academic-os/db";
 import { and, asc, eq, or } from "drizzle-orm";
 import { z } from "zod";
 
-import { getSessionUser } from "@/lib/auth";
-import { getActiveCohortId } from "@/lib/tenant";
-
 import type {
   CalendarEvent,
   EventSource,
   EventType,
 } from "@/features/calendar/types";
+import { getSessionUser } from "@/lib/auth";
+import { getActiveCohortId } from "@/lib/tenant";
+
 
 type DbKind = "class" | "exam" | "deadline" | "study_session" | "personal";
 type DbSource = "manual" | "ical" | "google_calendar" | "blackboard";

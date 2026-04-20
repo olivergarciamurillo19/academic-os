@@ -1,9 +1,9 @@
 import "server-only";
 
 import { db, documents, resources } from "@academic-os/db";
-import { count, desc, eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { count, desc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 
 import { Badge } from "@/components/ui/badge";

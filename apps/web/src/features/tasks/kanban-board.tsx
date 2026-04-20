@@ -49,7 +49,7 @@ export function KanbanBoard({ subjectId }: KanbanBoardProps) {
     const taskId = active.id as string;
     const task = tasks.find((t) => t.id === taskId);
     if (task && task.status !== newStatus) {
-      setStatus(taskId, newStatus);
+      void setStatus(taskId, newStatus);
     }
   }
 
