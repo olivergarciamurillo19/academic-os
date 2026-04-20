@@ -1,10 +1,10 @@
 import "server-only";
 
-import { db, subjects, topics } from "@academic-os/db";
+import { db, subjectMembers, subjects, topics } from "@academic-os/db";
 import { and, eq } from "drizzle-orm";
 
+import { getSessionUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { getActiveCohortId } from "@/lib/tenant";
 
 import { mockSubjects, type MockSubject, type SubjectSemester } from "./mock-data";
 
@@ -45,29 +45,49 @@ function rowToUi(row: SubjectRow): MockSubject {
   };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Listing query for the subjects grid. Returns the UI-shaped `MockSubject[]`
- * so downstream components remain unchanged.
+ * Listing query for the subjects grid.
  *
- * Fallback: when Supabase is not configured or we can't resolve a cohort
- * (e.g. deployed but no auth yet), returns the frontend mock so `/subjects`
- * keeps rendering in demo mode.
+ * Queries subjects the user is enrolled in via subject_members, so the
+ * list is stable across cohort changes and independent of the
+ * active_cohort_id cookie. Returns [] when the user has no enrolments
+ * (the UI renders an empty state). Mocks are only used in demo mode
+ * (Supabase unconfigured) or when no session is found.
  */
 export async function listSubjectsForActiveUser(): Promise<readonly MockSubject[]> {
   if (!isSupabaseConfigured()) return mockSubjects;
-  const cohortId = await getActiveCohortId();
-  if (!cohortId) return mockSubjects;
+  const session = await getSessionUser();
+  if (!session) return [];
 
   try {
     const rows = await db
-      .select()
-      .from(subjects)
-      .where(and(eq(subjects.cohortId, cohortId), eq(subjects.isActive, true)));
-    if (rows.length === 0) return mockSubjects;
+      .select({
+        id: subjects.id,
+        cohortId: subjects.cohortId,
+        universityId: subjects.universityId,
+        code: subjects.code,
+        name: subjects.name,
+        color: subjects.color,
+        credits: subjects.credits,
+        semester: subjects.semester,
+        isActive: subjects.isActive,
+        createdAt: subjects.createdAt,
+      })
+      .from(subjectMembers)
+      .innerJoin(subjects, eq(subjectMembers.subjectId, subjects.id))
+      .where(
+        and(
+          eq(subjectMembers.userId, session.user.id),
+          eq(subjects.isActive, true),
+        ),
+      );
     return rows.map(rowToUi);
   } catch (err) {
     console.error("[subjects.listSubjectsForActiveUser] drizzle query failed:", err);
-    return mockSubjects;
+    return [];
   }
 }
 
@@ -77,13 +97,14 @@ export async function getSubjectByIdForActiveUser(
   if (!isSupabaseConfigured()) {
     return mockSubjects.find((s) => s.id === subjectId) ?? null;
   }
+  if (!UUID_RE.test(subjectId)) return null;
   try {
     const rows = await db.select().from(subjects).where(eq(subjects.id, subjectId)).limit(1);
     const row = rows[0];
     return row ? rowToUi(row) : null;
   } catch (err) {
     console.error("[subjects.getSubjectByIdForActiveUser] drizzle query failed:", err);
-    return mockSubjects.find((s) => s.id === subjectId) ?? null;
+    return null;
   }
 }
 
