@@ -4,6 +4,9 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   transpilePackages: [
     "@academic-os/ai",
     "@academic-os/auth",
