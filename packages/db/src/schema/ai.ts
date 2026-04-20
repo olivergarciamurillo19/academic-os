@@ -83,6 +83,12 @@ export const conversations = pgTable(
       .references(() => subjects.id, { onDelete: "cascade" }),
     title: text("title").notNull().default("Nueva conversación"),
     pinned: boolean("pinned").notNull().default(false),
+    summary: jsonb("summary").$type<{
+      keyTopics?: string[];
+      openQuestions?: string[];
+      level?: string;
+      updatedAfterMessageId?: string;
+    }>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

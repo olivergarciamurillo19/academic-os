@@ -20,6 +20,7 @@ export default async function SettingsProfilePage() {
       <ProfileForm
         initialFullName={profile?.fullName ?? ""}
         email={profile?.email ?? ""}
+        initialAvatarUrl={profile?.avatarUrl ?? null}
       />
     </div>
   );
