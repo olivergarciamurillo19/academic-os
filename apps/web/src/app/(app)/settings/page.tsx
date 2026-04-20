@@ -1,4 +1,4 @@
-import { ChevronRight, Cog, LinkIcon } from "lucide-react";
+import { ChevronRight, Cog, LinkIcon, UserCircle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -9,6 +9,12 @@ export const metadata: Metadata = {
 };
 
 const sections = [
+  {
+    title: "Perfil",
+    description: "Tu nombre y datos visibles en la app.",
+    href: "/settings/profile" as const,
+    icon: UserCircle,
+  },
   {
     title: "Integraciones",
     description: "Conecta tu calendario iCal del aula virtual.",
