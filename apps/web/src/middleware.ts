@@ -6,12 +6,13 @@ export const config = {
     /*
      * Match all paths EXCEPT:
      *  - /login
-     *  - /api/public/**
+     *  - /api/** (route handlers enforce auth themselves and must return
+     *    JSON errors, not HTML redirects)
      *  - /_next/**
      *  - /favicon.ico
      *  - static file extensions.
      */
-    "/((?!login|api/public|_next|favicon\\.ico|.*\\.(?:png|jpg|svg|ico|css|js|woff2)$).*)",
+    "/((?!login|api|_next|favicon\\.ico|.*\\.(?:png|jpg|svg|ico|css|js|woff2)$).*)",
   ],
 };
 
