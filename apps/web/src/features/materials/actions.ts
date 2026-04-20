@@ -203,7 +203,9 @@ export async function uploadResource(
     return { ok: true, record };
   } catch (err) {
     // Roll back the uploaded file so the storage doesn't drift from the DB.
-    await admin.storage.from("materials").remove([storagePath]).catch(() => {});
+    await admin.storage.from("materials").remove([storagePath]).catch((cleanupErr) => {
+      console.warn("[materials.upload] storage cleanup failed:", cleanupErr);
+    });
     console.error("[materials.upload] db insert failed:", err);
     return { ok: false, reason: "db", message: "No se pudo registrar el recurso." };
   }
@@ -324,7 +326,7 @@ export async function getResourceSignedUrl(
       isNull(resources.deletedAt),
     ),
   });
-  if (!row || !row.storagePath) {
+  if (!row?.storagePath) {
     return { ok: false, message: "Recurso no encontrado." };
   }
 

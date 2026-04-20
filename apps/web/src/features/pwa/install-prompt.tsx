@@ -50,7 +50,9 @@ export function InstallPrompt() {
           onClick={() => {
             try {
               localStorage.setItem(DISMISSED_KEY, "1");
-            } catch {}
+            } catch {
+              /* localStorage disabled */
+            }
             setVisible(false);
           }}
         >
@@ -64,7 +66,9 @@ export function InstallPrompt() {
             if (choice.outcome === "dismissed") {
               try {
                 localStorage.setItem(DISMISSED_KEY, "1");
-              } catch {}
+              } catch {
+              /* localStorage disabled */
+            }
             }
             setVisible(false);
           }}

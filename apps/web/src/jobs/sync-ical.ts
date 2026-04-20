@@ -392,7 +392,7 @@ export const syncICalOnDemand = inngest.createFunction(
         .limit(1);
       return rows[0] ?? null;
     });
-    if (!integration || !integration.isActive) return { skipped: true };
+    if (!integration?.isActive) return { skipped: true };
 
     const meta: Record<string, unknown> = integration.metadata ?? {};
     const rawUrl = typeof meta.url === "string" ? meta.url.trim() : "";

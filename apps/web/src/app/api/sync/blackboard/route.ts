@@ -93,7 +93,7 @@ export async function POST(req: Request): Promise<Response> {
     at: new Date().toISOString(),
   };
 
-  console.log(JSON.stringify({ event: "blackboard.sync", ...summary }));
+  console.info(JSON.stringify({ event: "blackboard.sync", ...summary }));
 
   return NextResponse.json(
     {
