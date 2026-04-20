@@ -9,6 +9,7 @@ const nextConfig = {
     "@academic-os/auth",
     "@academic-os/db",
     "@academic-os/email",
+    "@academic-os/shared",
   ],
   experimental: {
     serverActions: {
