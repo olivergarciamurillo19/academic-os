@@ -1,12 +1,15 @@
 import { format, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import {
+  BellRing,
   BookOpen,
   CalendarClock,
   CheckSquare,
+  FileText,
   Flag,
   GraduationCap,
   MessageSquare,
+  PlayCircle,
   Sparkles,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -18,6 +21,9 @@ import { getSessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   loadDashboardData,
+  type CohortNotice,
+  type ContinueStudying,
+  type IndexedDocument,
   type PendingTask,
   type RecentConversation,
   type UpcomingEvent,
@@ -87,11 +93,26 @@ export default async function DashboardPage() {
         </p>
       </header>
 
+      {data.continueStudying ? (
+        <ContinueStudyingCard item={data.continueStudying} />
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <UpcomingEventsCard events={data.upcomingEvents} />
         <PendingTasksCard tasks={data.pendingTasks} />
         <RecentChatCard conversation={data.recentConversation} />
       </div>
+
+      {(data.indexedDocuments.length > 0 || data.cohortNotices.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {data.indexedDocuments.length > 0 && (
+            <IndexedDocumentsCard docs={data.indexedDocuments} />
+          )}
+          {data.cohortNotices.length > 0 && (
+            <CohortNoticesCard notices={data.cohortNotices} />
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {quickLinks.map((link) => {
@@ -191,6 +212,107 @@ function PendingTasksCard({ tasks }: { tasks: readonly PendingTask[] }) {
             ))}
           </ul>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContinueStudyingCard({ item }: { item: ContinueStudying }) {
+  return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/15 text-primary">
+            <PlayCircle className="h-5 w-5" />
+          </span>
+          <div>
+            <CardTitle className="text-base">Continuar estudiando</CardTitle>
+            <CardDescription>{item.subjectName}</CardDescription>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href={{ pathname: `/subjects/${item.subjectId}/chat` }}
+            className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-background"
+          >
+            <Sparkles className="h-3 w-3" />
+            Sesión 25 min
+          </Link>
+          {item.lastResourceId ? (
+            <Link
+              href={{
+                pathname: `/subjects/${item.subjectId}/resources/${item.lastResourceId}`,
+              }}
+              className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-background"
+            >
+              <FileText className="h-3 w-3" />
+              Último recurso
+            </Link>
+          ) : null}
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function IndexedDocumentsCard({ docs }: { docs: readonly IndexedDocument[] }) {
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <FileText className="h-4 w-4" />
+        </span>
+        <CardTitle className="text-base">Documentos listos</CardTitle>
+        <CardDescription>Indexados en las últimas 24h</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <ul className="divide-y">
+          {docs.map((d) => (
+            <li key={d.resourceId} className="px-6 py-3 text-sm">
+              <Link
+                href={{
+                  pathname: `/subjects/${d.subjectId}/resources/${d.resourceId}`,
+                }}
+                className="flex flex-col gap-0.5 hover:underline"
+              >
+                <span className="font-medium">{d.title}</span>
+                <span className="text-xs text-muted-foreground">
+                  {d.subjectName ?? "Sin asignatura"} ·{" "}
+                  <time dateTime={d.indexedAt.toISOString()}>
+                    {format(d.indexedAt, "d MMM HH:mm", { locale: es })}
+                  </time>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CohortNoticesCard({ notices }: { notices: readonly CohortNotice[] }) {
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <BellRing className="h-4 w-4" />
+        </span>
+        <CardTitle className="text-base">Avisos de tu grupo</CardTitle>
+        <CardDescription>Eventos oficiales de los próximos 7 días</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <ul className="divide-y">
+          {notices.map((n) => (
+            <li key={n.id} className="flex flex-col gap-0.5 px-6 py-3 text-sm">
+              <span className="font-medium">{n.title}</span>
+              <span className="text-xs text-muted-foreground">
+                <time dateTime={n.startAt.toISOString()}>{whenLabel(n.startAt)}</time>
+                {n.location ? ` · ${n.location}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );
