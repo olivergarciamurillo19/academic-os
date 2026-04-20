@@ -1,13 +1,8 @@
 import { db } from "@academic-os/db";
 import { integrations, events } from "@academic-os/db/schema";
 import { eq, and } from "drizzle-orm";
-import { Inngest } from "inngest";
 
-// ─── Inngest client ───────────────────────────────────────────────────────────
-
-// Use a locally-defined client. If the project later extracts a shared
-// lib/inngest.ts, re-export from there and remove this declaration.
-const inngest = new Inngest({ id: "academic-os" });
+import { inngest } from "../lib/inngest.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
