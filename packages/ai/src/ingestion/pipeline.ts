@@ -80,7 +80,7 @@ export async function runIngestionPipeline(
   // ── b. Download file from Supabase Storage ───────────────────────────────
   const { data: downloadData, error: downloadError } =
     await supabaseServiceClient.storage
-      .from("resources")
+      .from("materials")
       .download(storagePath);
 
   if (downloadError || !downloadData) {
