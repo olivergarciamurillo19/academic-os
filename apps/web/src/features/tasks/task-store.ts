@@ -1,104 +1,148 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { mockInitialTasks } from "./mock-tasks";
-import type { Task, TaskStatus } from "./types";
+import {
+  createTask as createTaskAction,
+  deleteTask as deleteTaskAction,
+  listTasks as listTasksAction,
+  updateTask as updateTaskAction,
+  type CreateTaskInput,
+} from "@/actions/tasks";
 
-const STORAGE_KEY = "academic_os.tasks";
-const BROADCAST = "academic_os:tasks_changed";
+import type { Task, TaskPriority, TaskStatus } from "./types";
 
-type Store = Record<string, Task>;
-
-const SERVER_SNAPSHOT: Store = Object.freeze(
-  Object.fromEntries(mockInitialTasks.map((t) => [t.id, t])),
-) as Store;
-
-let cachedClientSnapshot: Store | null = null;
-
-function readFresh(): Store {
-  if (typeof window === "undefined") return SERVER_SNAPSHOT;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const s: Store = { ...SERVER_SNAPSHOT };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-      return s;
-    }
-    const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Store) : { ...SERVER_SNAPSHOT };
-  } catch {
-    return { ...SERVER_SNAPSHOT };
-  }
-}
-
-function getSnapshot(): Store {
-  if (typeof window === "undefined") return SERVER_SNAPSHOT;
-  if (cachedClientSnapshot === null) cachedClientSnapshot = readFresh();
-  return cachedClientSnapshot;
-}
-
-function getServerSnapshot(): Store {
-  return SERVER_SNAPSHOT;
-}
-
-function write(next: Store): void {
-  cachedClientSnapshot = next;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(BROADCAST));
-}
-
-function subscribe(listener: () => void): () => void {
-  const onChange = (): void => {
-    cachedClientSnapshot = null;
-    listener();
-  };
-  window.addEventListener(BROADCAST, onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    window.removeEventListener(BROADCAST, onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
+export const tasksKey = ["tasks"] as const;
 
 export function useTasks(): Task[] {
-  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  return Object.values(store).sort((a, b) => a.createdAtISO.localeCompare(b.createdAtISO));
+  const q = useQuery({
+    queryKey: tasksKey,
+    queryFn: () => listTasksAction(),
+    staleTime: 30_000,
+    initialData: [],
+  });
+  return q.data;
+}
+
+function applyOptimistic(
+  qc: QueryClient,
+  updater: (prev: Task[]) => Task[],
+): Task[] {
+  const prev = qc.getQueryData<Task[]>(tasksKey) ?? [];
+  qc.setQueryData<Task[]>(tasksKey, updater(prev));
+  return prev;
+}
+
+function tempId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `temp_${Math.random().toString(36).slice(2)}`;
 }
 
 export function useTaskActions(): {
-  create: (input: Omit<Task, "id" | "createdAtISO">) => Task;
-  update: (id: string, patch: Partial<Omit<Task, "id">>) => void;
-  setStatus: (id: string, status: TaskStatus) => void;
-  remove: (id: string) => void;
+  create: (input: Omit<Task, "id" | "createdAtISO">) => Promise<Task>;
+  update: (id: string, patch: Partial<Omit<Task, "id">>) => Promise<void>;
+  setStatus: (id: string, status: TaskStatus) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 } {
-  const create = useCallback((input: Omit<Task, "id" | "createdAtISO">) => {
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `task_${Math.random().toString(36).slice(2)}`;
-    const task: Task = { ...input, id, createdAtISO: new Date().toISOString() };
-    const current = readFresh();
-    write({ ...current, [id]: task });
-    return task;
-  }, []);
+  const qc = useQueryClient();
 
-  const update = useCallback((id: string, patch: Partial<Omit<Task, "id">>) => {
-    const current = readFresh();
-    const existing = current[id];
-    if (!existing) return;
-    write({ ...current, [id]: { ...existing, ...patch } });
-  }, []);
+  const createMut = useMutation({
+    mutationFn: async (input: CreateTaskInput) => createTaskAction(input),
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: tasksKey });
+      const optimistic: Task = {
+        id: tempId(),
+        title: input.title,
+        subjectId: input.subjectId ?? null,
+        status: input.status ?? "todo",
+        priority: input.priority ?? "normal",
+        dueISO: input.dueISO ?? undefined,
+        createdAtISO: new Date().toISOString(),
+      };
+      const prev = applyOptimistic(qc, (list) => [optimistic, ...list]);
+      return { prev, tempId: optimistic.id };
+    },
+    onError: (err, _input, ctx) => {
+      if (ctx?.prev) qc.setQueryData(tasksKey, ctx.prev);
+      toast.error(err instanceof Error ? err.message : "No se pudo crear la tarea");
+    },
+    onSuccess: (real, _input, ctx) => {
+      qc.setQueryData<Task[]>(tasksKey, (list) =>
+        (list ?? []).map((t) => (t.id === ctx?.tempId ? real : t)),
+      );
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: tasksKey }),
+  });
 
-  const setStatus = useCallback((id: string, status: TaskStatus) => {
-    update(id, { status });
-  }, [update]);
+  const updateMut = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<Task, "id">> }) => {
+      return updateTaskAction({
+        id,
+        patch: {
+          title: patch.title,
+          subjectId: patch.subjectId,
+          status: patch.status,
+          priority: patch.priority,
+          dueISO:
+            patch.dueISO === undefined ? undefined : (patch.dueISO as string | null),
+        },
+      });
+    },
+    onMutate: async ({ id, patch }) => {
+      await qc.cancelQueries({ queryKey: tasksKey });
+      const prev = applyOptimistic(qc, (list) =>
+        list.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      );
+      return { prev };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(tasksKey, ctx.prev);
+      toast.error(err instanceof Error ? err.message : "No se pudo actualizar");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: tasksKey }),
+  });
 
-  const remove = useCallback((id: string) => {
-    const current = readFresh();
-    const { [id]: _removed, ...rest } = current;
-    write(rest);
-  }, []);
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => deleteTaskAction(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: tasksKey });
+      const prev = applyOptimistic(qc, (list) => list.filter((t) => t.id !== id));
+      return { prev };
+    },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(tasksKey, ctx.prev);
+      toast.error(err instanceof Error ? err.message : "No se pudo borrar");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: tasksKey }),
+  });
 
-  return { create, update, setStatus, remove };
+  return {
+    create: async (input) =>
+      createMut.mutateAsync({
+        title: input.title,
+        subjectId: input.subjectId,
+        status: input.status,
+        priority: input.priority,
+        dueISO: input.dueISO ?? null,
+      }),
+    update: async (id, patch) => {
+      await updateMut.mutateAsync({ id, patch });
+    },
+    setStatus: async (id, status) => {
+      await updateMut.mutateAsync({ id, patch: { status } });
+    },
+    remove: async (id) => {
+      await deleteMut.mutateAsync(id);
+    },
+  };
 }
+
+// Re-export for callers that import types from the store module.
+export type { TaskPriority, TaskStatus };
