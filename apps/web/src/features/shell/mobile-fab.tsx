@@ -1,8 +1,8 @@
 "use client";
 
 import { CalendarPlus, CheckSquare, FileText, Plus, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, type ComponentType } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,7 @@ interface QuickAction {
   label: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
-  run: () => void;
+  href: string;
 }
 
 const quickActions: readonly QuickAction[] = [
@@ -28,33 +28,34 @@ const quickActions: readonly QuickAction[] = [
     label: "Nuevo evento",
     description: "Clase, examen, entrega, recordatorio",
     icon: CalendarPlus,
-    run: () => toast.info("Próximamente: crear evento desde el FAB"),
+    href: "/calendar?new=1",
   },
   {
     key: "task",
     label: "Nueva tarea",
     description: "Algo que tienes que hacer",
     icon: CheckSquare,
-    run: () => toast.info("Próximamente: crear tarea desde el FAB"),
+    href: "/tasks?new=1",
   },
   {
     key: "note",
     label: "Nueva nota",
     description: "Apunte rápido en una asignatura",
     icon: FileText,
-    run: () => toast.info("Próximamente: crear nota desde el FAB"),
+    href: "/subjects?new=note",
   },
   {
     key: "upload",
     label: "Subir documento",
     description: "PDF, imagen o texto a una asignatura",
     icon: Upload,
-    run: () => toast.info("Próximamente: subir documento desde el FAB"),
+    href: "/subjects?new=upload",
   },
 ] as const;
 
 export function MobileFab() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -80,8 +81,8 @@ export function MobileFab() {
                 <button
                   type="button"
                   onClick={() => {
-                    action.run();
                     setOpen(false);
+                    router.push(action.href);
                   }}
                   className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-accent"
                 >
