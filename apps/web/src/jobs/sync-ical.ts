@@ -1,13 +1,8 @@
 import { db } from "@academic-os/db";
 import { integrations, events } from "@academic-os/db/schema";
 import { eq, and } from "drizzle-orm";
-import { Inngest } from "inngest";
 
-// ─── Inngest client ───────────────────────────────────────────────────────────
-
-// Use a locally-defined client. If the project later extracts a shared
-// lib/inngest.ts, re-export from there and remove this declaration.
-const inngest = new Inngest({ id: "academic-os" });
+import { inngest } from "../lib/inngest.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -327,18 +322,32 @@ export const syncICalIntegrations = inngest.createFunction(
 
             upserted++;
 
-            // Emit change event when title or start changed.
             if (didChange) {
               changed++;
-              // NOTE: In a full Inngest setup, emit via inngest.send().
-              // Kept as a structured log here to avoid needing a running
-              // Inngest server at import time.
-              console.info("[sync-ical] event/ical.changed", {
-                uid: vevent.uid,
-                integrationId: integration.id,
+              await inngest.send({
+                name: "event.ical.changed",
+                data: {
+                  uid: vevent.uid,
+                  integrationId: integration.id,
+                  userId: integration.userId,
+                  title: vevent.summary,
+                },
               });
             }
           }
+
+          // Stamp lastSyncAt on the integration metadata.
+          await db
+            .update(integrations)
+            .set({
+              metadata: {
+                ...(integration.metadata ?? {}),
+                lastSyncAt: new Date().toISOString(),
+                lastUpserted: upserted,
+                lastChanged: changed,
+              },
+            })
+            .where(eq(integrations.id, integration.id));
 
           return {
             integrationId: integration.id,
@@ -354,5 +363,91 @@ export const syncICalIntegrations = inngest.createFunction(
     );
 
     return { processed: activeIntegrations.length, summary };
+  },
+);
+
+/**
+ * Event-triggered one-shot sync. Fired from the settings page when the user
+ * saves/updates their iCal URL so they see calendar data immediately without
+ * waiting for the 30-minute cron.
+ */
+export const syncICalOnDemand = inngest.createFunction(
+  { id: "sync-ical-on-demand", name: "Sync iCal (on demand)", retries: 2 },
+  { event: "ical.sync.requested" },
+  async ({ event, step }) => {
+    const integrationId =
+      typeof event.data === "object" &&
+      event.data !== null &&
+      "integrationId" in event.data &&
+      typeof (event.data as { integrationId: unknown }).integrationId === "string"
+        ? (event.data as { integrationId: string }).integrationId
+        : null;
+    if (!integrationId) return { skipped: true };
+
+    const integration = await step.run("load-integration", async () => {
+      const rows = await db
+        .select()
+        .from(integrations)
+        .where(eq(integrations.id, integrationId))
+        .limit(1);
+      return rows[0] ?? null;
+    });
+    if (!integration || !integration.isActive) return { skipped: true };
+
+    const meta: Record<string, unknown> = integration.metadata ?? {};
+    const rawUrl = typeof meta.url === "string" ? meta.url.trim() : "";
+    if (!rawUrl) return { skipped: true };
+
+    const icalText = await step.run("fetch-feed", async () => {
+      const res = await fetch(rawUrl, {
+        headers: { "User-Agent": "AcademicOS/1.0 iCal sync" },
+      });
+      if (!res.ok) throw new Error(`HTTP ${String(res.status)} from ${rawUrl}`);
+      return res.text();
+    });
+
+    await step.run("upsert-events", async () => {
+      const vevents = parseICalText(icalText);
+      for (const vevent of vevents) {
+        await db
+          .insert(events)
+          .values({
+            externalId: vevent.uid,
+            title: vevent.summary,
+            description: vevent.description,
+            location: vevent.location,
+            startAt: vevent.dtstart,
+            endAt: vevent.dtend,
+            source: "ical",
+            kind: "personal",
+            ownerUserId: integration.userId,
+            cohortId: null,
+            isAllDay: false,
+            isOfficial: false,
+          })
+          .onConflictDoUpdate({
+            target: events.externalId,
+            set: {
+              title: vevent.summary,
+              description: vevent.description,
+              location: vevent.location,
+              startAt: vevent.dtstart,
+              endAt: vevent.dtend,
+            },
+          });
+      }
+      await db
+        .update(integrations)
+        .set({
+          metadata: {
+            ...(integration.metadata ?? {}),
+            lastSyncAt: new Date().toISOString(),
+          },
+        })
+        .where(eq(integrations.id, integration.id));
+      return { upserted: vevents.length };
+    });
+
+    return { ok: true };
   },
 );
