@@ -32,6 +32,16 @@ export function useResources(subjectId: string, topicKind?: TopicKind): Resource
     staleTime: 30_000,
     initialData: [],
     enabled: Boolean(subjectId),
+    // Poll while any document in the list is still being indexed so the
+    // "indexado" badge updates without a manual refresh.
+    refetchInterval: (q) => {
+      const data = q.state.data as ResourceRecord[] | undefined;
+      const inFlight = (data ?? []).some(
+        (r) =>
+          r.documentStatus === "pending" || r.documentStatus === "processing",
+      );
+      return inFlight ? 5_000 : false;
+    },
   });
   const rows = q.data as UiResourceRecord[];
   return topicKind ? rows.filter((r) => r.topicKind === topicKind || true) : rows;

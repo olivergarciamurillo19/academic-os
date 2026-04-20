@@ -1,6 +1,8 @@
 export type ResourceKind = "pdf" | "image" | "text" | "markdown";
 export type TopicKind = "theory" | "practice";
 
+export type DocumentStatus = "pending" | "processing" | "indexed" | "failed" | null;
+
 export interface ResourceRecord {
   id: string;
   subjectId: string;
@@ -12,6 +14,8 @@ export interface ResourceRecord {
   uploadedAtISO: string;
   /** Only exists for mock client-side uploads; real storage will expose a signed URL. */
   clientBlobUrl?: string;
+  /** Ingestion pipeline status, when applicable (PDFs). */
+  documentStatus?: DocumentStatus;
 }
 
 export const ACCEPTED_MIME_TYPES: Readonly<Record<ResourceKind, readonly string[]>> = {

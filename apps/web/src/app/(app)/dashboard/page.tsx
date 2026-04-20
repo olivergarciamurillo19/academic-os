@@ -169,9 +169,12 @@ function UpcomingEventsCard({ events }: { events: readonly UpcomingEvent[] }) {
       </CardHeader>
       <CardContent className="p-0">
         {events.length === 0 ? (
-          <p className="px-6 pb-5 text-sm text-muted-foreground">
-            Sin eventos próximos. Añade uno desde el calendario.
-          </p>
+          <div className="flex flex-col gap-1 px-6 pb-5">
+            <p className="text-sm text-muted-foreground">Sin eventos próximos.</p>
+            <p className="text-xs text-muted-foreground/80">
+              Toca esta tarjeta para abrir el calendario y añadir uno.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y">
             {events.map((e) => (
@@ -202,7 +205,12 @@ function PendingTasksCard({ tasks }: { tasks: readonly PendingTask[] }) {
       </CardHeader>
       <CardContent className="p-0">
         {tasks.length === 0 ? (
-          <p className="px-6 pb-5 text-sm text-muted-foreground">Estás al día.</p>
+          <div className="flex flex-col gap-1 px-6 pb-5">
+            <p className="text-sm text-muted-foreground">Estás al día.</p>
+            <p className="text-xs text-muted-foreground/80">
+              Abre tareas para añadir la próxima entrega.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y">
             {tasks.map((t) => (

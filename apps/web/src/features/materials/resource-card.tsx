@@ -1,10 +1,11 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +19,7 @@ import {
 
 import { ResourceIcon } from "./resource-icon";
 import { useResourceActions } from "./resource-store";
-import { formatBytes, type ResourceRecord } from "./types";
+import { formatBytes, type DocumentStatus, type ResourceRecord } from "./types";
 
 interface ResourceCardProps {
   resource: ResourceRecord;
@@ -64,6 +65,8 @@ export function ResourceCard({ resource }: ResourceCardProps) {
         </span>
       </Link>
 
+      <StatusBadge status={resource.documentStatus ?? null} />
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button variant="ghost" size="icon" aria-label={`Eliminar ${resource.name}`}>
@@ -89,5 +92,31 @@ export function ResourceCard({ resource }: ResourceCardProps) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: DocumentStatus }) {
+  if (status === null || status === undefined) return null;
+  if (status === "indexed") {
+    return (
+      <Badge variant="secondary" className="gap-1 whitespace-nowrap text-[10px] uppercase">
+        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+        Indexado
+      </Badge>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <Badge variant="destructive" className="gap-1 whitespace-nowrap text-[10px] uppercase">
+        <XCircle className="h-3 w-3" />
+        Error
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="gap-1 whitespace-nowrap text-[10px] uppercase">
+      <Loader2 className="h-3 w-3 animate-spin" />
+      {status === "processing" ? "Procesando" : "Indexando"}
+    </Badge>
   );
 }

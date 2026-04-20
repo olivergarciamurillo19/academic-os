@@ -247,9 +247,7 @@ export async function deleteResource(
 
 // ─── Listing + signed URLs ────────────────────────────────────────────────────
 
-export interface ResourceListItem extends ResourceRecord {
-  documentStatus: "pending" | "processing" | "indexed" | "failed" | null;
-}
+export type ResourceListItem = ResourceRecord;
 
 /**
  * Lists the caller's resources for a subject. Returns an empty array if
