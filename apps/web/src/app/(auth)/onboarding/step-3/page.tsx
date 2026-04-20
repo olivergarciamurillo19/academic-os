@@ -1,0 +1,145 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { completeOnboarding } from "@/features/onboarding/actions";
+import { OnboardingProgress } from "@/features/onboarding/progress";
+import { readOnboardingState } from "@/features/onboarding/state";
+import {
+  getCurrentSemester,
+  mockSubjects,
+  subjectColorVar,
+  type SubjectSemester,
+} from "@/features/subjects/mock-data";
+
+export default async function OnboardingStep3() {
+  const state = await readOnboardingState();
+  const currentSemester = getCurrentSemester();
+  const previouslySelected = new Set(state.selectedSubjectIds ?? []);
+  const defaultPicked = (semester: SubjectSemester) =>
+    previouslySelected.size > 0 ? previouslySelected : new Set(mockSubjects
+      .filter((s) => s.semester === semester)
+      .map((s) => s.id));
+
+  const picked = defaultPicked(currentSemester);
+
+  const q1 = mockSubjects.filter((s) => s.semester === "1Q");
+  const q2 = mockSubjects.filter((s) => s.semester === "2Q");
+
+  return (
+    <div className="flex flex-col gap-6">
+      <OnboardingProgress step={3} />
+
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Confirma tus asignaturas</h1>
+        <p className="text-sm text-muted-foreground">
+          Hemos precargado las del cuatrimestre actual ({currentSemester}). Marca o desmarca según
+          tu matrícula real.
+        </p>
+      </div>
+
+      <form action={completeOnboarding} className="flex flex-col gap-6">
+        <SubjectGroup
+          title="Primer cuatrimestre"
+          semester="1Q"
+          active={currentSemester === "1Q"}
+          subjects={q1}
+          picked={picked}
+        />
+        <SubjectGroup
+          title="Segundo cuatrimestre"
+          semester="2Q"
+          active={currentSemester === "2Q"}
+          subjects={q2}
+          picked={picked}
+        />
+
+        <div className="flex items-center justify-between">
+          <Button asChild variant="ghost">
+            <Link href={{ pathname: "/onboarding/step-2" }}>Atrás</Link>
+          </Button>
+          <Button type="submit" size="lg">
+            Empezar
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function SubjectGroup({
+  title,
+  semester,
+  active,
+  subjects,
+  picked,
+}: {
+  title: string;
+  semester: SubjectSemester;
+  active: boolean;
+  subjects: readonly (typeof mockSubjects)[number][];
+  picked: Set<string>;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <legend className="text-sm font-medium">
+          {title} <span className="text-muted-foreground">({semester})</span>
+        </legend>
+        {active && (
+          <Badge variant="secondary" className="text-[10px] uppercase">
+            Actual
+          </Badge>
+        )}
+      </div>
+      <div className="grid gap-2">
+        {subjects.map((s) => {
+          const checked = picked.has(s.id);
+          return (
+            <label key={s.id} className="cursor-pointer">
+              <input
+                type="checkbox"
+                name="subjects"
+                value={s.id}
+                defaultChecked={checked}
+                className="peer sr-only"
+              />
+              <Card className="p-3 transition-colors peer-checked:border-primary peer-checked:bg-primary/5 peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+                <CardContent className="flex items-center gap-3 p-0">
+                  <span
+                    aria-hidden="true"
+                    className="h-8 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: subjectColorVar(s.colorIndex) }}
+                  />
+                  <div className="flex flex-1 flex-col gap-0.5">
+                    <span className="text-sm font-medium">{s.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {s.code} · {s.credits} ECTS
+                    </span>
+                  </div>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-sm border peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
+                    {checked && (
+                      <svg
+                        className="h-3 w-3"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m3 8 3.5 3.5L13 4.5" />
+                      </svg>
+                    )}
+                  </span>
+                </CardContent>
+              </Card>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
