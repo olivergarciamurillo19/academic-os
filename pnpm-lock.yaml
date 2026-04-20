@@ -44,6 +44,9 @@ importers:
       '@academic-os/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@academic-os/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@anthropic-ai/sdk':
         specifier: ^0.32.1
         version: 0.32.1

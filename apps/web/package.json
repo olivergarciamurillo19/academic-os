@@ -17,6 +17,7 @@
     "@academic-os/config-tailwind": "workspace:*",
     "@academic-os/db": "workspace:*",
     "@academic-os/email": "workspace:*",
+    "@academic-os/shared": "workspace:*",
     "@anthropic-ai/sdk": "^0.32.1",
     "openai": "^4.98.0",
     "@dnd-kit/core": "^6.3.1",
