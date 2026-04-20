@@ -1,0 +1,6 @@
+/*
+ * Full globals.css re-export for apps that want the default setup.
+ * Apps may instead import preset.css directly and add their own layers.
+ */
+@import "tailwindcss";
+@import "./preset.css";

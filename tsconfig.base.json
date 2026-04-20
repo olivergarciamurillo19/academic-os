@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["packages/ui/src/*"],
+      "@db/*": ["packages/db/src/*"],
+      "@ai/*": ["packages/ai/src/*"],
+      "@shared/*": ["packages/shared/src/*"],
+      "@integrations/*": ["packages/integrations/src/*"],
+      "@/*": ["apps/web/src/*"]
+    }
+  }
+}
