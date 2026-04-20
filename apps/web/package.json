@@ -12,7 +12,14 @@
     "clean": "rm -rf .next .turbo"
   },
   "dependencies": {
+    "@academic-os/auth": "workspace:*",
     "@academic-os/config-tailwind": "workspace:*",
+    "@academic-os/db": "workspace:*",
+    "@academic-os/email": "workspace:*",
+    "drizzle-orm": "^0.42.0",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.49.8",
+    "inngest": "^3.29.0",
     "@radix-ui/react-slot": "^1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

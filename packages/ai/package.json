@@ -1,0 +1,26 @@
+{
+  "name": "@academic-os/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@academic-os/db": "workspace:*",
+    "@supabase/supabase-js": "^2.49.4",
+    "drizzle-orm": "^0.42.0",
+    "openai": "^4.98.0",
+    "unpdf": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.2",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

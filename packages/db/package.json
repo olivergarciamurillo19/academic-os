@@ -13,9 +13,11 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/seed/ual.ts",
+    "db:seed:ual": "tsx src/seed/ual.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.42.0",
     "postgres": "^3.4.7"
   },
