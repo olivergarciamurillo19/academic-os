@@ -18,8 +18,11 @@ const BROADCAST_EVENT = "academic_os:mock_resources_changed";
 type Store = Record<string, ResourceRecord>;
 const blobUrlCache = new Map<string, string>();
 
+const EMPTY_STORE: Store = Object.freeze({}) as Store;
+let cachedClientSnapshot: Store | null = null;
+
 function readStore(): Store {
-  if (typeof window === "undefined") return {};
+  if (typeof window === "undefined") return EMPTY_STORE;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
@@ -31,25 +34,32 @@ function readStore(): Store {
 }
 
 function writeStore(next: Store): void {
+  cachedClientSnapshot = next;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event(BROADCAST_EVENT));
 }
 
 function subscribe(listener: () => void): () => void {
-  window.addEventListener(BROADCAST_EVENT, listener);
-  window.addEventListener("storage", listener);
+  const onChange = (): void => {
+    cachedClientSnapshot = null;
+    listener();
+  };
+  window.addEventListener(BROADCAST_EVENT, onChange);
+  window.addEventListener("storage", onChange);
   return () => {
-    window.removeEventListener(BROADCAST_EVENT, listener);
-    window.removeEventListener("storage", listener);
+    window.removeEventListener(BROADCAST_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
   };
 }
 
 function getSnapshot(): Store {
-  return readStore();
+  if (typeof window === "undefined") return EMPTY_STORE;
+  if (cachedClientSnapshot === null) cachedClientSnapshot = readStore();
+  return cachedClientSnapshot;
 }
 
 function getServerSnapshot(): Store {
-  return {};
+  return EMPTY_STORE;
 }
 
 export function useResources(subjectId: string, topicKind?: TopicKind): ResourceRecord[] {

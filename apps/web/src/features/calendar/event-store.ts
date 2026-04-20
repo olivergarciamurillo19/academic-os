@@ -10,46 +10,59 @@ const BROADCAST = "academic_os:calendar_events_changed";
 
 type Store = Record<string, CalendarEvent>;
 
-function seed(): Store {
-  return Object.fromEntries(mockInitialEvents.map((e) => [e.id, e]));
-}
+const SERVER_SNAPSHOT: Store = Object.freeze(
+  Object.fromEntries(mockInitialEvents.map((e) => [e.id, e])),
+) as Store;
 
-function read(): Store {
-  if (typeof window === "undefined") return seed();
+let cachedClientSnapshot: Store | null = null;
+
+function readFresh(): Store {
+  if (typeof window === "undefined") return SERVER_SNAPSHOT;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      const s = seed();
+      const s: Store = { ...SERVER_SNAPSHOT };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
     }
     const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Store) : seed();
+    return typeof parsed === "object" && parsed !== null ? (parsed as Store) : { ...SERVER_SNAPSHOT };
   } catch {
-    return seed();
+    return { ...SERVER_SNAPSHOT };
   }
 }
 
+function getSnapshot(): Store {
+  if (typeof window === "undefined") return SERVER_SNAPSHOT;
+  if (cachedClientSnapshot === null) cachedClientSnapshot = readFresh();
+  return cachedClientSnapshot;
+}
+
+function getServerSnapshot(): Store {
+  return SERVER_SNAPSHOT;
+}
+
 function write(next: Store): void {
+  cachedClientSnapshot = next;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event(BROADCAST));
 }
 
 function subscribe(listener: () => void): () => void {
-  window.addEventListener(BROADCAST, listener);
-  window.addEventListener("storage", listener);
+  const onChange = (): void => {
+    cachedClientSnapshot = null;
+    listener();
+  };
+  window.addEventListener(BROADCAST, onChange);
+  window.addEventListener("storage", onChange);
   return () => {
-    window.removeEventListener(BROADCAST, listener);
-    window.removeEventListener("storage", listener);
+    window.removeEventListener(BROADCAST, onChange);
+    window.removeEventListener("storage", onChange);
   };
 }
 
 export function useCalendarEvents(): CalendarEvent[] {
-  const store = useSyncExternalStore(
-    subscribe,
-    () => read(),
-    () => seed(),
-  );
+  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   return Object.values(store).sort((a, b) => a.startISO.localeCompare(b.startISO));
 }
 
@@ -58,11 +71,11 @@ export function useCalendarActions(): {
   remove: (id: string) => void;
 } {
   const upsert = useCallback((event: CalendarEvent) => {
-    const current = read();
+    const current = readFresh();
     write({ ...current, [event.id]: event });
   }, []);
   const remove = useCallback((id: string) => {
-    const current = read();
+    const current = readFresh();
     const { [id]: _removed, ...rest } = current;
     write(rest);
   }, []);
