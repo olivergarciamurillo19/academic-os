@@ -1,8 +1,8 @@
 /*
- * Academic OS — shared Tailwind v4 preset.
- * Design tokens: neutral base + blue primary. Compatible with shadcn/ui.
+ * Academic OS — shared Tailwind v4 preset (OKLCH).
+ * Design tokens: neutral base + UAL-friendly blue primary + 10 subject colors.
  *
- * Apps consume this with:
+ * Usage inside an app's globals.css:
  *   @import "tailwindcss";
  *   @import "@academic-os/config-tailwind/preset.css";
  */
@@ -10,40 +10,69 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(240 10% 3.9%);
+  /* --- Neutral surface --- */
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
 
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(240 10% 3.9%);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.145 0 0);
 
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(240 10% 3.9%);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.145 0 0);
 
-  --color-primary: hsl(221.2 83.2% 53.3%);
-  --color-primary-foreground: hsl(210 40% 98%);
+  /* --- Primary (UAL blue) --- */
+  --color-primary: oklch(0.52 0.17 252);
+  --color-primary-foreground: oklch(0.985 0 0);
 
-  --color-secondary: hsl(240 4.8% 95.9%);
-  --color-secondary-foreground: hsl(240 5.9% 10%);
+  --color-secondary: oklch(0.97 0 0);
+  --color-secondary-foreground: oklch(0.205 0 0);
 
-  --color-muted: hsl(240 4.8% 95.9%);
-  --color-muted-foreground: hsl(240 3.8% 46.1%);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.556 0 0);
 
-  --color-accent: hsl(240 4.8% 95.9%);
-  --color-accent-foreground: hsl(240 5.9% 10%);
+  --color-accent: oklch(0.97 0 0);
+  --color-accent-foreground: oklch(0.205 0 0);
 
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
 
-  --color-border: hsl(240 5.9% 90%);
-  --color-input: hsl(240 5.9% 90%);
-  --color-ring: hsl(221.2 83.2% 53.3%);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.52 0.17 252);
 
-  --radius: 0.5rem;
+  /* --- Subject palette (10) ---
+   * Used to tag asignaturas with a distinct, accessible hue.
+   * Balanced for L~0.60-0.72 so all look sibling-weight.
+   */
+  --color-subject-1: oklch(0.62 0.18 252);
+  --color-subject-1-foreground: oklch(0.985 0 0);
+  --color-subject-2: oklch(0.68 0.13 210);
+  --color-subject-2-foreground: oklch(0.145 0 0);
+  --color-subject-3: oklch(0.68 0.15 170);
+  --color-subject-3-foreground: oklch(0.145 0 0);
+  --color-subject-4: oklch(0.74 0.17 135);
+  --color-subject-4-foreground: oklch(0.145 0 0);
+  --color-subject-5: oklch(0.78 0.16 85);
+  --color-subject-5-foreground: oklch(0.145 0 0);
+  --color-subject-6: oklch(0.72 0.17 55);
+  --color-subject-6-foreground: oklch(0.145 0 0);
+  --color-subject-7: oklch(0.64 0.21 27);
+  --color-subject-7-foreground: oklch(0.985 0 0);
+  --color-subject-8: oklch(0.66 0.22 350);
+  --color-subject-8-foreground: oklch(0.985 0 0);
+  --color-subject-9: oklch(0.60 0.23 310);
+  --color-subject-9-foreground: oklch(0.985 0 0);
+  --color-subject-10: oklch(0.58 0.19 282);
+  --color-subject-10-foreground: oklch(0.985 0 0);
+
+  /* --- Radii --- */
+  --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
+  /* --- Typography --- */
   --font-sans:
     var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -53,33 +82,45 @@
 
 @layer base {
   .dark {
-    --color-background: hsl(240 10% 3.9%);
-    --color-foreground: hsl(0 0% 98%);
+    --color-background: oklch(0.145 0 0);
+    --color-foreground: oklch(0.985 0 0);
 
-    --color-card: hsl(240 10% 3.9%);
-    --color-card-foreground: hsl(0 0% 98%);
+    --color-card: oklch(0.205 0 0);
+    --color-card-foreground: oklch(0.985 0 0);
 
-    --color-popover: hsl(240 10% 3.9%);
-    --color-popover-foreground: hsl(0 0% 98%);
+    --color-popover: oklch(0.205 0 0);
+    --color-popover-foreground: oklch(0.985 0 0);
 
-    --color-primary: hsl(217.2 91.2% 59.8%);
-    --color-primary-foreground: hsl(222.2 47.4% 11.2%);
+    --color-primary: oklch(0.68 0.15 252);
+    --color-primary-foreground: oklch(0.205 0 0);
 
-    --color-secondary: hsl(240 3.7% 15.9%);
-    --color-secondary-foreground: hsl(0 0% 98%);
+    --color-secondary: oklch(0.269 0 0);
+    --color-secondary-foreground: oklch(0.985 0 0);
 
-    --color-muted: hsl(240 3.7% 15.9%);
-    --color-muted-foreground: hsl(240 5% 64.9%);
+    --color-muted: oklch(0.269 0 0);
+    --color-muted-foreground: oklch(0.708 0 0);
 
-    --color-accent: hsl(240 3.7% 15.9%);
-    --color-accent-foreground: hsl(0 0% 98%);
+    --color-accent: oklch(0.269 0 0);
+    --color-accent-foreground: oklch(0.985 0 0);
 
-    --color-destructive: hsl(0 62.8% 30.6%);
-    --color-destructive-foreground: hsl(0 0% 98%);
+    --color-destructive: oklch(0.704 0.191 22.216);
+    --color-destructive-foreground: oklch(0.985 0 0);
 
-    --color-border: hsl(240 3.7% 15.9%);
-    --color-input: hsl(240 3.7% 15.9%);
-    --color-ring: hsl(217.2 91.2% 59.8%);
+    --color-border: oklch(1 0 0 / 10%);
+    --color-input: oklch(1 0 0 / 15%);
+    --color-ring: oklch(0.68 0.15 252);
+
+    /* Subject palette — slightly brighter in dark to keep contrast. */
+    --color-subject-1: oklch(0.70 0.16 252);
+    --color-subject-2: oklch(0.74 0.13 210);
+    --color-subject-3: oklch(0.74 0.14 170);
+    --color-subject-4: oklch(0.78 0.16 135);
+    --color-subject-5: oklch(0.82 0.15 85);
+    --color-subject-6: oklch(0.78 0.16 55);
+    --color-subject-7: oklch(0.70 0.20 27);
+    --color-subject-8: oklch(0.72 0.21 350);
+    --color-subject-9: oklch(0.68 0.22 310);
+    --color-subject-10: oklch(0.66 0.19 282);
   }
 
   *,
