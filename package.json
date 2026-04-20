@@ -17,7 +17,12 @@
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "clean": "turbo run clean && rm -rf node_modules .turbo"
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "db:generate": "turbo run db:generate --filter=@academic-os/db",
+    "db:migrate": "turbo run db:migrate --filter=@academic-os/db",
+    "db:push": "turbo run db:push --filter=@academic-os/db",
+    "db:studio": "turbo run db:studio --filter=@academic-os/db",
+    "db:seed": "turbo run db:seed --filter=@academic-os/db"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

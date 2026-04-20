@@ -8,6 +8,7 @@
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        ".env*",
         "!**/*.test.*",
         "!**/*.spec.*",
         "!.env.local",
@@ -20,11 +21,11 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^lint"],
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^typecheck"],
       "outputs": []
     },
     "test": {
@@ -32,6 +33,23 @@
       "outputs": ["coverage/**"]
     },
     "clean": {
+      "cache": false
+    },
+    "db:generate": {
+      "cache": false,
+      "outputs": ["migrations/**"]
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:seed": {
       "cache": false
     }
   }
