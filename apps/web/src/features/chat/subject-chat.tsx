@@ -13,6 +13,7 @@ import { useChatActions, useConversation, useConversations } from "./chat-store"
 import { ConversationList } from "./conversation-list";
 import { MessageBubble } from "./message-bubble";
 import { mockAnswer } from "./mock-response";
+import { streamChat } from "./stream-client";
 import type { ChatMessage } from "./types";
 
 interface SubjectChatProps {
@@ -83,11 +84,29 @@ export function SubjectChat({ subject }: SubjectChatProps) {
 
     setStreamingLock(true);
     try {
-      const { content, citations } = mockAnswer(subject.name);
-      await streamInto((chunk) => {
-        patchMessage(convoId, assistantId, { content: chunk });
-      }, content);
-      patchMessage(convoId, assistantId, { streaming: false, citations });
+      // Prefer the real streaming API; fall back to a local mock if the
+      // fetch fails (offline, missing env, auth not yet wired).
+      const result = await streamChat({
+        subjectId: subject.id,
+        conversationId: convoId.startsWith("mock_") ? undefined : convoId,
+        message: text,
+        onDelta: (chunk) => patchMessage(convoId, assistantId, { content: chunk }),
+      });
+      if (result.ok) {
+        patchMessage(convoId, assistantId, {
+          content: result.text,
+          streaming: false,
+        });
+      } else {
+        const fallback = mockAnswer(subject.name);
+        await streamInto((chunk) => {
+          patchMessage(convoId, assistantId, { content: chunk });
+        }, fallback.content);
+        patchMessage(convoId, assistantId, {
+          streaming: false,
+          citations: fallback.citations,
+        });
+      }
     } finally {
       setStreamingLock(false);
     }
