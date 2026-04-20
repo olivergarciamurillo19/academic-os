@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mockSubjects } from "@/features/subjects/mock-data";
+import { useSubjectsForActiveUser } from "@/features/subjects/use-subjects";
 
 import { eventFormSchema, type EventFormValues } from "./event-schema";
 import { newEventId, useCalendarActions } from "./event-store";
@@ -63,6 +63,7 @@ export function EventDialog({
   defaultStartISO,
 }: EventDialogProps) {
   const { upsert, remove } = useCalendarActions();
+  const subjects = useSubjectsForActiveUser();
 
   const baseISO = defaultStartISO ?? new Date().toISOString();
   const start = event ? toDateParts(event.startISO) : toDateParts(baseISO);
@@ -165,7 +166,7 @@ export function EventDialog({
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <option value="">(Sin asignatura)</option>
-                {mockSubjects.map((s) => (
+                {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>

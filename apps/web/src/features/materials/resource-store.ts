@@ -1,107 +1,111 @@
 "use client";
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { toast } from "sonner";
 
+import {
+  deleteResource as deleteResourceAction,
+  listResourcesForSubject,
+} from "./actions";
 import type { ResourceRecord, TopicKind } from "./types";
 
-/**
- * Client-side mock store backed by localStorage.
- * Blob URLs live only in the current tab's memory — they are intentionally
- * not persisted because `URL.createObjectURL` results are invalid across
- * tab reloads. The file metadata persists so the UI stays consistent, and
- * the viewer shows a graceful fallback when the blob is no longer live.
- */
-
-const STORAGE_KEY = "academic_os.mock_resources";
-const BROADCAST_EVENT = "academic_os:mock_resources_changed";
-
-type Store = Record<string, ResourceRecord>;
 const blobUrlCache = new Map<string, string>();
 
-const EMPTY_STORE: Store = Object.freeze({}) as Store;
-let cachedClientSnapshot: Store | null = null;
+const listKey = (subjectId: string) => ["resources", subjectId] as const;
 
-function readStore(): Store {
-  if (typeof window === "undefined") return EMPTY_STORE;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Store) : {};
-  } catch {
-    return {};
-  }
+type DocStatus = "pending" | "processing" | "indexed" | "failed" | null;
+
+interface UiResourceRecord extends ResourceRecord {
+  documentStatus?: DocStatus;
 }
 
-function writeStore(next: Store): void {
-  cachedClientSnapshot = next;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(BROADCAST_EVENT));
-}
-
-function subscribe(listener: () => void): () => void {
-  const onChange = (): void => {
-    cachedClientSnapshot = null;
-    listener();
-  };
-  window.addEventListener(BROADCAST_EVENT, onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    window.removeEventListener(BROADCAST_EVENT, onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
-
-function getSnapshot(): Store {
-  if (typeof window === "undefined") return EMPTY_STORE;
-  if (cachedClientSnapshot === null) cachedClientSnapshot = readStore();
-  return cachedClientSnapshot;
-}
-
-function getServerSnapshot(): Store {
-  return EMPTY_STORE;
-}
-
+/**
+ * Lists resources owned by the caller for a subject. `topicKind` is a UI
+ * hint; the DB doesn't yet partition by topic kind, so filtering here is a
+ * no-op but the param is kept for consumer API stability.
+ */
 export function useResources(subjectId: string, topicKind?: TopicKind): ResourceRecord[] {
-  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  return Object.values(store)
-    .filter((r) => r.subjectId === subjectId && (!topicKind || r.topicKind === topicKind))
-    .sort((a, b) => (a.uploadedAtISO < b.uploadedAtISO ? 1 : -1));
+  const q = useQuery({
+    queryKey: listKey(subjectId),
+    queryFn: () => listResourcesForSubject(subjectId),
+    staleTime: 30_000,
+    initialData: [],
+    enabled: Boolean(subjectId),
+  });
+  const rows = q.data as UiResourceRecord[];
+  return topicKind ? rows.filter((r) => r.topicKind === topicKind || true) : rows;
 }
 
 export function useResource(resourceId: string): ResourceRecord | null {
-  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  return store[resourceId] ?? null;
+  // Walk every cached subject list — cheaper than a dedicated query.
+  const qc = useQueryClient();
+  const all = qc.getQueriesData<ResourceRecord[]>({ queryKey: ["resources"] });
+  for (const [, list] of all) {
+    const hit = (list ?? []).find((r) => r.id === resourceId);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 export function useResourceActions(): {
   addResource: (record: ResourceRecord, file?: File) => void;
-  removeResource: (resourceId: string) => void;
+  removeResource: (resourceId: string) => Promise<void>;
   blobUrlFor: (resourceId: string) => string | undefined;
 } {
-  useEffect(() => {
-    // No cleanup on unmount: blob URLs live for the tab session.
-  }, []);
+  const qc = useQueryClient();
 
-  const addResource = useCallback((record: ResourceRecord, file?: File) => {
-    if (file) {
-      const url = URL.createObjectURL(file);
-      blobUrlCache.set(record.id, url);
-    }
-    const current = readStore();
-    writeStore({ ...current, [record.id]: record });
-  }, []);
+  const removeMut = useMutation({
+    mutationFn: async (resourceId: string) => deleteResourceAction(resourceId),
+    onMutate: async (resourceId) => {
+      const keys = qc.getQueriesData<ResourceRecord[]>({ queryKey: ["resources"] });
+      const rollback = keys.map(([key, list]) => {
+        qc.setQueryData(
+          key,
+          (list ?? []).filter((r) => r.id !== resourceId),
+        );
+        return { key, list } as const;
+      });
+      return { rollback };
+    },
+    onError: (err, _id, ctx) => {
+      ctx?.rollback.forEach(({ key, list }) => qc.setQueryData(key, list));
+      toast.error(err instanceof Error ? err.message : "No se pudo borrar el recurso");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["resources"] }),
+  });
 
-  const removeResource = useCallback((resourceId: string) => {
-    const cached = blobUrlCache.get(resourceId);
-    if (cached) {
-      URL.revokeObjectURL(cached);
-      blobUrlCache.delete(resourceId);
-    }
-    const current = readStore();
-    const { [resourceId]: _removed, ...rest } = current;
-    writeStore(rest);
-  }, []);
+  const addResource = useCallback(
+    (record: ResourceRecord, file?: File) => {
+      if (file) {
+        const url = URL.createObjectURL(file);
+        blobUrlCache.set(record.id, url);
+      }
+      // Prepend optimistically to every cached subject list that matches.
+      qc.setQueryData<ResourceRecord[]>(listKey(record.subjectId), (prev) => [
+        record,
+        ...(prev ?? []),
+      ]);
+      // Invalidate to fetch documentStatus from DB shortly after.
+      void qc.invalidateQueries({ queryKey: listKey(record.subjectId) });
+    },
+    [qc],
+  );
+
+  const removeResource = useCallback(
+    async (resourceId: string) => {
+      const cached = blobUrlCache.get(resourceId);
+      if (cached) {
+        URL.revokeObjectURL(cached);
+        blobUrlCache.delete(resourceId);
+      }
+      const res = await removeMut.mutateAsync(resourceId);
+      if (!res.ok) {
+        toast.error(res.message);
+      }
+    },
+    [removeMut],
+  );
 
   const blobUrlFor = useCallback(
     (resourceId: string) => blobUrlCache.get(resourceId),

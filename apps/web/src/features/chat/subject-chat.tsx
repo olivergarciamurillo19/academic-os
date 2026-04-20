@@ -46,19 +46,20 @@ export function SubjectChat({ subject }: SubjectChatProps) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [active?.messages.length]);
 
-  function handleNew() {
-    const convo = createConversation(subject.id, "Nueva conversación");
+  async function handleNew() {
+    const convo = await createConversation(subject.id, "Nueva conversación");
     setActiveId(convo.id);
     setTimeout(() => inputRef.current?.focus(), 50);
   }
 
   async function handleSend(text: string) {
-    let convoId = activeId;
+    let convoId: string | null = activeId;
     if (!convoId) {
-      const convo = createConversation(subject.id, text.slice(0, 48));
+      const convo = await createConversation(subject.id, text.slice(0, 48));
       convoId = convo.id;
       setActiveId(convo.id);
     }
+    if (!convoId) return;
 
     const userMsg: ChatMessage = {
       id: newMsgId(),
@@ -66,7 +67,7 @@ export function SubjectChat({ subject }: SubjectChatProps) {
       content: text,
       createdAtISO: new Date().toISOString(),
     };
-    appendMessage(convoId, userMsg);
+    appendMessage(convoId!, userMsg);
     track({
       name: "chat_message_sent",
       payload: { subjectId: subject.id, characters: text.length },
@@ -80,17 +81,20 @@ export function SubjectChat({ subject }: SubjectChatProps) {
       createdAtISO: new Date().toISOString(),
       streaming: true,
     };
-    appendMessage(convoId, assistantMsg);
+    appendMessage(convoId!, assistantMsg);
 
     setStreamingLock(true);
     try {
       // Prefer the real streaming API; fall back to a local mock if the
       // fetch fails (offline, missing env, auth not yet wired).
+      const activeConvoId: string = convoId;
       const result = await streamChat({
         subjectId: subject.id,
-        conversationId: convoId.startsWith("mock_") ? undefined : convoId,
+        conversationId: /^[0-9a-f-]{36}$/i.test(activeConvoId)
+          ? activeConvoId
+          : undefined,
         message: text,
-        onDelta: (chunk) => patchMessage(convoId, assistantId, { content: chunk }),
+        onDelta: (chunk) => patchMessage(activeConvoId, assistantId, { content: chunk }),
       });
       if (result.ok) {
         const citations = result.citations.map((c, i) => ({
@@ -99,7 +103,7 @@ export function SubjectChat({ subject }: SubjectChatProps) {
           page: c.pageFrom ?? undefined,
           resourceHref: `/subjects/${subject.id}/resources/${c.resourceId}`,
         }));
-        patchMessage(convoId, assistantId, {
+        patchMessage(activeConvoId, assistantId, {
           content: result.text,
           streaming: false,
           citations: citations.length > 0 ? citations : undefined,
@@ -107,9 +111,9 @@ export function SubjectChat({ subject }: SubjectChatProps) {
       } else {
         const fallback = mockAnswer(subject.name);
         await streamInto((chunk) => {
-          patchMessage(convoId, assistantId, { content: chunk });
+          patchMessage(activeConvoId, assistantId, { content: chunk });
         }, fallback.content);
-        patchMessage(convoId, assistantId, {
+        patchMessage(activeConvoId, assistantId, {
           streaming: false,
           citations: fallback.citations,
         });

@@ -16,7 +16,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { getSubjectById, subjectColorVar } from "@/features/subjects/mock-data";
+import { useSubjectsForActiveUser } from "@/features/subjects/use-subjects";
 import { cn } from "@/lib/utils";
 
 import type { CalendarEvent } from "./types";
@@ -29,6 +29,11 @@ interface MonthViewProps {
 
 export function MonthView({ events, onSelectSlot, onSelectEvent }: MonthViewProps) {
   const [cursor, setCursor] = useState(() => new Date());
+  const subjects = useSubjectsForActiveUser();
+  const colorById = useMemo(
+    () => new Map(subjects.map((s) => [s.id, s.color] as const)),
+    [subjects],
+  );
 
   const { days, monthLabel } = useMemo(() => {
     const monthStart = startOfMonth(cursor);
@@ -123,8 +128,8 @@ export function MonthView({ events, onSelectSlot, onSelectEvent }: MonthViewProp
                 </span>
                 <div className="flex flex-col gap-0.5">
                   {dayEvents.slice(0, 3).map((ev) => {
-                    const subject = ev.subjectId ? getSubjectById(ev.subjectId) : null;
-                    const color = subject ? subjectColorVar(subject.colorIndex) : "oklch(0.6 0 0)";
+                    const color =
+                      (ev.subjectId && colorById.get(ev.subjectId)) || "oklch(0.6 0 0)";
                     return (
                       <span
                         key={ev.id}

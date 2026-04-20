@@ -5,7 +5,7 @@ import { es } from "date-fns/locale";
 import { MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { getSubjectById, subjectColorVar } from "@/features/subjects/mock-data";
+import { useSubjectsForActiveUser } from "@/features/subjects/use-subjects";
 
 import {
   eventSourceAccent,
@@ -26,6 +26,8 @@ function dayLabel(date: Date): string {
 }
 
 export function AgendaView({ events, onSelectEvent }: AgendaViewProps) {
+  const subjects = useSubjectsForActiveUser();
+  const colorById = new Map(subjects.map((s) => [s.id, s.color] as const));
   if (events.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -54,8 +56,7 @@ export function AgendaView({ events, onSelectEvent }: AgendaViewProps) {
             </h3>
             <ul className="flex flex-col gap-2">
               {dayEvents.map((ev) => {
-                const subject = ev.subjectId ? getSubjectById(ev.subjectId) : null;
-                const color = subject ? subjectColorVar(subject.colorIndex) : "oklch(0.6 0 0)";
+                const color = (ev.subjectId && colorById.get(ev.subjectId)) || "oklch(0.6 0 0)";
                 return (
                   <li key={ev.id}>
                     <button

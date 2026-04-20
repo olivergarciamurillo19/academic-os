@@ -16,7 +16,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { deleteResource } from "./actions";
 import { ResourceIcon } from "./resource-icon";
 import { useResourceActions } from "./resource-store";
 import { formatBytes, type ResourceRecord } from "./types";
@@ -33,8 +32,7 @@ export function ResourceCard({ resource }: ResourceCardProps) {
   async function handleDelete() {
     setDeleting(true);
     try {
-      await deleteResource(resource.id);
-      removeResource(resource.id);
+      await removeResource(resource.id);
       toast.success(`Eliminado: ${resource.name}`);
       setOpen(false);
     } catch (err) {

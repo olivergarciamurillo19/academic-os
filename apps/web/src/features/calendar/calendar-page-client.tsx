@@ -1,10 +1,10 @@
 "use client";
 
 import { CalendarDays, List, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { mockSubjects } from "@/features/subjects/mock-data";
+import { useSubjectsForActiveUser } from "@/features/subjects/use-subjects";
 import { cn } from "@/lib/utils";
 
 import { AgendaView } from "./agenda-view";
@@ -23,14 +23,16 @@ interface CalendarPageClientProps {
 
 export function CalendarPageClient({ subjectId }: CalendarPageClientProps) {
   const [view, setView] = useState<ViewMode>("month");
-  const [visible, setVisible] = useState<Set<string>>(
-    () => new Set(mockSubjects.map((s) => s.id)),
-  );
+  const [visible, setVisible] = useState<Set<string>>(() => new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [defaultStartISO, setDefaultStartISO] = useState<string | undefined>();
 
   const events = useCalendarEvents();
+  const subjects = useSubjectsForActiveUser();
+  useEffect(() => {
+    setVisible((prev) => (prev.size === 0 ? new Set(subjects.map((s) => s.id)) : prev));
+  }, [subjects]);
 
   const filtered = useMemo(() => {
     return events.filter((e) => {
@@ -91,7 +93,7 @@ export function CalendarPageClient({ subjectId }: CalendarPageClientProps) {
         <SubjectFilter
           visible={visible}
           onToggle={toggle}
-          onAll={() => setVisible(new Set(mockSubjects.map((s) => s.id)))}
+          onAll={() => setVisible(new Set(subjects.map((s) => s.id)))}
           onNone={() => setVisible(new Set())}
         />
       )}

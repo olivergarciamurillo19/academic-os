@@ -5,7 +5,7 @@ import { es } from "date-fns/locale";
 import { CalendarClock, Flag } from "lucide-react";
 import type { CSSProperties } from "react";
 
-import { getSubjectById, subjectColorVar } from "@/features/subjects/mock-data";
+import { useSubjectById } from "@/features/subjects/use-subjects";
 import { cn } from "@/lib/utils";
 
 import { priorityAccent, priorityLabels, type Task } from "./types";
@@ -27,8 +27,8 @@ export function TaskCard({
   style,
   isDragging,
 }: TaskCardProps) {
-  const subject = task.subjectId ? getSubjectById(task.subjectId) : null;
-  const subjectColor = subject ? subjectColorVar(subject.colorIndex) : null;
+  const subject = useSubjectById(task.subjectId);
+  const subjectColor = subject?.color ?? null;
   const due = task.dueISO ? new Date(task.dueISO) : null;
   const dueLabel = due ? formatDue(due) : null;
   const dueState = due ? (isPast(due) && !isToday(due) ? "overdue" : isToday(due) ? "today" : "ok") : "none";

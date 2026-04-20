@@ -1,114 +1,147 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { useCallback } from "react";
+import { toast } from "sonner";
+
+import {
+  createConversation as createConversationAction,
+  deleteConversation as deleteConversationAction,
+  getConversation as getConversationAction,
+  listConversations as listConversationsAction,
+  saveMessage as saveMessageAction,
+} from "@/actions/conversations";
 
 import type { ChatMessage, Conversation } from "./types";
 
-const STORAGE_KEY = "academic_os.chat";
-const BROADCAST = "academic_os:chat_changed";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Store = Record<string, Conversation>;
-
-const EMPTY_STORE: Store = Object.freeze({}) as Store;
-
-let cachedClientSnapshot: Store | null = null;
-
-function readFresh(): Store {
-  if (typeof window === "undefined") return EMPTY_STORE;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Store) : {};
-  } catch {
-    return {};
-  }
-}
-
-function getSnapshot(): Store {
-  if (typeof window === "undefined") return EMPTY_STORE;
-  if (cachedClientSnapshot === null) cachedClientSnapshot = readFresh();
-  return cachedClientSnapshot;
-}
-
-function getServerSnapshot(): Store {
-  return EMPTY_STORE;
-}
-
-function write(next: Store): void {
-  cachedClientSnapshot = next;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(BROADCAST));
-}
-
-function subscribe(listener: () => void): () => void {
-  const onChange = (): void => {
-    cachedClientSnapshot = null;
-    listener();
-  };
-  window.addEventListener(BROADCAST, onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    window.removeEventListener(BROADCAST, onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
+const listKey = (subjectId: string) => ["conversations", subjectId] as const;
+const detailKey = (id: string) => ["conversation", id] as const;
 
 export function useConversations(subjectId: string): Conversation[] {
-  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  return Object.values(store)
-    .filter((c) => c.subjectId === subjectId)
-    .sort((a, b) => b.updatedAtISO.localeCompare(a.updatedAtISO));
+  const q = useQuery({
+    queryKey: listKey(subjectId),
+    queryFn: () => listConversationsAction(subjectId),
+    staleTime: 30_000,
+    initialData: [],
+    enabled: UUID.test(subjectId),
+  });
+  return q.data;
 }
 
 export function useConversation(id: string | null): Conversation | null {
-  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  if (!id) return null;
-  return store[id] ?? null;
+  const q = useQuery({
+    queryKey: detailKey(id ?? "none"),
+    queryFn: async () => (id ? getConversationAction(id) : null),
+    staleTime: 30_000,
+    enabled: Boolean(id) && UUID.test(id ?? ""),
+  });
+  return q.data ?? null;
+}
+
+function patchDetail(
+  qc: QueryClient,
+  id: string,
+  updater: (prev: Conversation | null) => Conversation | null,
+): Conversation | null {
+  const prev = qc.getQueryData<Conversation | null>(detailKey(id)) ?? null;
+  const next = updater(prev);
+  qc.setQueryData(detailKey(id), next);
+  return prev;
+}
+
+function patchList(
+  qc: QueryClient,
+  subjectId: string,
+  updater: (prev: Conversation[]) => Conversation[],
+): Conversation[] {
+  const prev = qc.getQueryData<Conversation[]>(listKey(subjectId)) ?? [];
+  qc.setQueryData(listKey(subjectId), updater(prev));
+  return prev;
 }
 
 export function useChatActions(): {
-  createConversation: (subjectId: string, title: string) => Conversation;
+  createConversation: (
+    subjectId: string,
+    title: string,
+  ) => Promise<Conversation>;
   appendMessage: (conversationId: string, message: ChatMessage) => void;
   patchMessage: (
     conversationId: string,
     messageId: string,
     patch: Partial<Pick<ChatMessage, "content" | "streaming" | "citations">>,
   ) => void;
-  deleteConversation: (id: string) => void;
+  deleteConversation: (id: string) => Promise<void>;
 } {
-  const newId = () =>
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
+  const qc = useQueryClient();
 
-  const createConversation = useCallback((subjectId: string, title: string) => {
-    const now = new Date().toISOString();
-    const convo: Conversation = {
-      id: newId(),
-      subjectId,
-      title,
-      createdAtISO: now,
-      updatedAtISO: now,
-      messages: [],
-    };
-    const current = readFresh();
-    write({ ...current, [convo.id]: convo });
-    return convo;
-  }, []);
+  const createMut = useMutation({
+    mutationFn: async (input: { subjectId: string; title: string }) =>
+      createConversationAction(input),
+    onSuccess: (conv) => {
+      patchList(qc, conv.subjectId, (list) => [conv, ...list]);
+      qc.setQueryData(detailKey(conv.id), conv);
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo crear la conversación");
+    },
+  });
 
-  const appendMessage = useCallback((conversationId: string, message: ChatMessage) => {
-    const current = readFresh();
-    const convo = current[conversationId];
-    if (!convo) return;
-    const next: Conversation = {
-      ...convo,
-      messages: [...convo.messages, message],
-      updatedAtISO: new Date().toISOString(),
-      title: convo.messages.length === 0 && message.role === "user" ? message.content.slice(0, 48) : convo.title,
-    };
-    write({ ...current, [conversationId]: next });
-  }, []);
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => deleteConversationAction(id),
+    onSuccess: (_result, id) => {
+      const detail = qc.getQueryData<Conversation | null>(detailKey(id));
+      if (detail) {
+        patchList(qc, detail.subjectId, (list) => list.filter((c) => c.id !== id));
+      }
+      qc.removeQueries({ queryKey: detailKey(id) });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "No se pudo borrar la conversación");
+    },
+  });
+
+  const createConversation = useCallback(
+    async (subjectId: string, title: string) => {
+      return createMut.mutateAsync({ subjectId, title });
+    },
+    [createMut],
+  );
+
+  const appendMessage = useCallback(
+    (conversationId: string, message: ChatMessage) => {
+      patchDetail(qc, conversationId, (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: [...prev.messages, message],
+          updatedAtISO: new Date().toISOString(),
+          title:
+            prev.messages.length === 0 && message.role === "user"
+              ? message.content.slice(0, 48)
+              : prev.title,
+        };
+      });
+      // Persist user messages immediately; assistant messages are persisted
+      // via patchMessage when streaming: false.
+      if (message.role === "user" && UUID.test(conversationId) && message.content.length > 0) {
+        void saveMessageAction({
+          conversationId,
+          role: "user",
+          content: message.content,
+        }).catch(() => {
+          // Silent — stays in cache; user can still see message on this tab.
+        });
+      }
+    },
+    [qc],
+  );
 
   const patchMessage = useCallback(
     (
@@ -116,27 +149,45 @@ export function useChatActions(): {
       messageId: string,
       patch: Partial<Pick<ChatMessage, "content" | "streaming" | "citations">>,
     ) => {
-      const current = readFresh();
-      const convo = current[conversationId];
-      if (!convo) return;
-      const msgs = convo.messages.map((m) => (m.id === messageId ? { ...m, ...patch } : m));
-      write({
-        ...current,
-        [conversationId]: {
-          ...convo,
+      patchDetail(qc, conversationId, (prev) => {
+        if (!prev) return prev;
+        const msgs = prev.messages.map((m) =>
+          m.id === messageId ? { ...m, ...patch } : m,
+        );
+        return {
+          ...prev,
           messages: msgs,
           updatedAtISO: new Date().toISOString(),
-        },
+        };
       });
+      if (patch.streaming === false && UUID.test(conversationId)) {
+        const conv = qc.getQueryData<Conversation | null>(detailKey(conversationId));
+        const msg = conv?.messages.find((m) => m.id === messageId);
+        if (msg && msg.role === "assistant" && msg.content.length > 0) {
+          void saveMessageAction({
+            conversationId,
+            role: "assistant",
+            content: msg.content,
+          }).catch(() => {
+            /* cache-only */
+          });
+        }
+      }
     },
-    [],
+    [qc],
   );
 
-  const deleteConversation = useCallback((id: string) => {
-    const current = readFresh();
-    const { [id]: _removed, ...rest } = current;
-    write(rest);
-  }, []);
+  const deleteConversation = useCallback(
+    async (id: string) => {
+      await deleteMut.mutateAsync(id);
+    },
+    [deleteMut],
+  );
 
-  return { createConversation, appendMessage, patchMessage, deleteConversation };
+  return {
+    createConversation,
+    appendMessage,
+    patchMessage,
+    deleteConversation,
+  };
 }

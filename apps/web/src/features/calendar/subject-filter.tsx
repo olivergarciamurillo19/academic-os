@@ -1,6 +1,6 @@
 "use client";
 
-import { mockSubjects, subjectColorVar } from "@/features/subjects/mock-data";
+import { useSubjectsForActiveUser } from "@/features/subjects/use-subjects";
 import { cn } from "@/lib/utils";
 
 interface SubjectFilterProps {
@@ -11,6 +11,14 @@ interface SubjectFilterProps {
 }
 
 export function SubjectFilter({ visible, onToggle, onAll, onNone }: SubjectFilterProps) {
+  const subjects = useSubjectsForActiveUser();
+  if (subjects.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Sin asignaturas. Termina el onboarding para filtrar por asignatura.
+      </p>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <button
@@ -27,7 +35,7 @@ export function SubjectFilter({ visible, onToggle, onAll, onNone }: SubjectFilte
       >
         Ninguna
       </button>
-      {mockSubjects.map((s) => {
+      {subjects.map((s) => {
         const active = visible.has(s.id);
         return (
           <button
@@ -43,14 +51,14 @@ export function SubjectFilter({ visible, onToggle, onAll, onNone }: SubjectFilte
             )}
             style={
               active
-                ? { backgroundColor: `color-mix(in oklch, ${subjectColorVar(s.colorIndex)} 20%, transparent)` }
+                ? { backgroundColor: `color-mix(in oklch, ${s.color} 20%, transparent)` }
                 : undefined
             }
           >
             <span
               aria-hidden="true"
               className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: subjectColorVar(s.colorIndex) }}
+              style={{ backgroundColor: s.color }}
             />
             {s.shortName}
           </button>
