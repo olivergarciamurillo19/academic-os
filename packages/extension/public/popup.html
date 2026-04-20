@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>UAL Bridge</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: -apple-system, system-ui, sans-serif; width: 320px; padding: 14px 16px; margin: 0; }
+      h1 { font-size: 14px; margin: 0 0 8px; }
+      p { margin: 4px 0; font-size: 12px; color: #555; }
+      .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+      .status { font-weight: 600; }
+      .status.ok { color: #059669; }
+      .status.off { color: #dc2626; }
+      button { border: 0; background: #2563eb; color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; width: 100%; }
+      button.secondary { background: #e5e7eb; color: #111; margin-top: 6px; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      input { width: 100%; box-sizing: border-box; padding: 6px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; }
+      .error { color: #dc2626; font-size: 11px; margin-top: 6px; word-break: break-word; }
+      a { font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <h1>UAL Bridge — Academic OS</h1>
+
+    <div class="row">
+      <span>Estado:</span>
+      <span id="status" class="status off">desconectado</span>
+    </div>
+
+    <div class="row">
+      <span>Última sincronización:</span>
+      <span id="last-sync">—</span>
+    </div>
+
+    <p>Pega aquí el token de sesión de Academic OS (menú → Ajustes → Token):</p>
+    <input id="jwt" placeholder="eyJhbGci..." />
+    <button id="save-jwt" class="secondary">Guardar token</button>
+
+    <button id="sync" style="margin-top: 10px">Sincronizar ahora</button>
+
+    <p class="error" id="error"></p>
+
+    <p style="margin-top: 10px">
+      <a href="https://academic-os-mu.vercel.app" target="_blank">Abrir Academic OS →</a>
+    </p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
