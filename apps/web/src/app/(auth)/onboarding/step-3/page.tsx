@@ -107,10 +107,13 @@ export default async function OnboardingStep3() {
   const { q1, q2 } = await loadSubjectsForDegree(universitySlug, state.degreeCode);
   const semester = currentPeriod();
   const defaultGroup = semester === "1Q" ? q1 : q2;
-  const previouslySelected = new Set(state.selectedSubjectIds ?? []);
+  const availableIds = new Set([...q1, ...q2].map((s) => s.id));
+  const previouslyValid = (state.selectedSubjectIds ?? []).filter((id) =>
+    availableIds.has(id),
+  );
   const picked =
-    previouslySelected.size > 0
-      ? previouslySelected
+    previouslyValid.length > 0
+      ? new Set(previouslyValid)
       : new Set(defaultGroup.map((s) => s.id));
 
   return (
