@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./logger": "./src/logger.ts",
-    "./cost": "./src/cost.ts"
+    "./cost": "./src/cost.ts",
+    "./rate-limit": "./src/rate-limit.ts",
+    "./upload-guard": "./src/upload-guard.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
