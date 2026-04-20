@@ -1,0 +1,24 @@
+{
+  "name": "academic-os",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "turbo run db:generate --filter=@academic-os/db",
+    "db:migrate": "turbo run db:migrate --filter=@academic-os/db",
+    "db:push": "turbo run db:push --filter=@academic-os/db",
+    "db:studio": "turbo run db:studio --filter=@academic-os/db",
+    "db:seed": "turbo run db:seed --filter=@academic-os/db"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
