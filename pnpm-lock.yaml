@@ -116,6 +116,9 @@ importers:
       next-themes:
         specifier: ^0.4.4
         version: 0.4.6(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      openai:
+        specifier: ^4.98.0
+        version: 4.104.0(ws@8.20.0)(zod@3.25.76)
       posthog-js:
         specifier: ^1.203.2
         version: 1.369.3

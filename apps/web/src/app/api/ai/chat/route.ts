@@ -1,6 +1,6 @@
 import { conversations, db, messages, subjects as subjectsTable } from "@academic-os/db";
-import Anthropic from "@anthropic-ai/sdk";
 import { and, asc, eq } from "drizzle-orm";
+import OpenAI from "openai";
 import { z } from "zod";
 
 import { getSessionUser } from "@/lib/auth";
@@ -14,10 +14,13 @@ const chatBodySchema = z.object({
   message: z.string().min(1).max(8000),
 });
 
-const MODEL = "claude-sonnet-4-5";
+// Claude Sonnet 4.5 is the target per the blueprint; temporarily served by
+// OpenAI until an ANTHROPIC_API_KEY lands. Model choice is env-configurable.
+const OPENAI_MODEL = process.env.OPENAI_CHAT_MODEL ?? "gpt-4o-mini";
 const MAX_TOKENS = 1500;
 
-const SYSTEM_PROMPT = (subjectName: string): string => `Eres un tutor académico del alumno para la asignatura "${subjectName}" en la Universidad de Almería. Responde en español, con explicaciones claras y ejemplos numéricos cuando apliquen. Usa Markdown: negritas para términos clave, listas para pasos, bloques de código para notación. Si no estás seguro, dilo.`;
+const SYSTEM_PROMPT = (subjectName: string): string =>
+  `Eres un tutor académico del alumno para la asignatura "${subjectName}" en la Universidad de Almería. Responde en español, con explicaciones claras y ejemplos numéricos cuando apliquen. Usa Markdown: negritas para términos clave, listas para pasos, bloques de código para notación. Si no estás seguro, dilo.`;
 
 export async function POST(request: Request): Promise<Response> {
   const session = await getSessionUser();
@@ -25,7 +28,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let parsed;
+  let parsed: z.infer<typeof chatBodySchema>;
   try {
     parsed = chatBodySchema.parse(await request.json());
   } catch (err) {
@@ -35,8 +38,8 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // Verify the subject belongs to a cohort the user is in (RLS is the real
-  // enforcer; this is an early-exit).
+  // Verify the subject exists. RLS enforces ownership; this is just an
+  // early exit with a nicer 404 than a 500.
   const subjectRow = await db
     .select({ id: subjectsTable.id, name: subjectsTable.name })
     .from(subjectsTable)
@@ -64,41 +67,38 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Could not create conversation" }, { status: 500 });
   }
 
-  // Persist the user turn.
+  // Persist user turn.
   await db.insert(messages).values({
     conversationId,
     role: "user",
     content: { text: parsed.message },
   });
 
-  // Load recent history (including the just-inserted user message).
+  // Load history.
   const history = await db
     .select({ role: messages.role, content: messages.content })
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
     .orderBy(asc(messages.createdAt));
 
-  const anthropicHistory = history
+  const openaiHistory: { role: "user" | "assistant"; content: string }[] = history
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => {
       const text =
         m.content && typeof m.content === "object" && "text" in m.content
           ? String((m.content as { text: string }).text)
           : "";
-      return {
-        role: m.role as "user" | "assistant",
-        content: text,
-      };
+      return { role: m.role as "user" | "assistant", content: text };
     });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   const encoder = new TextEncoder();
 
-  // ── Mock path when ANTHROPIC_API_KEY is missing ───────────────────────────
+  // ── Mock path when OPENAI_API_KEY is missing ─────────────────────────────
   if (!apiKey) {
-    const mock = `_(modo mock — añade \`ANTHROPIC_API_KEY\` en Vercel para respuestas reales de Claude Sonnet 4.5)._
+    const mock = `_(modo mock — falta \`OPENAI_API_KEY\` en este entorno)._
 
-Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quieres repasar y te contesto con citas en cuanto tenga retrieval contra tus apuntes.`;
+Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quieres repasar y cuando configures el LLM te contesto con citas de tus apuntes.`;
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         for (let i = 0; i < mock.length; i += 4) {
@@ -127,13 +127,17 @@ Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quier
     });
   }
 
-  // ── Real Anthropic streaming ──────────────────────────────────────────────
-  const client = new Anthropic({ apiKey });
-  const anthropicStream = client.messages.stream({
-    model: MODEL,
+  // ── Real OpenAI streaming ────────────────────────────────────────────────
+  const openai = new OpenAI({ apiKey });
+  const openaiStream = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
+    stream: true,
     max_tokens: MAX_TOKENS,
-    system: SYSTEM_PROMPT(subject.name),
-    messages: anthropicHistory,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT(subject.name) },
+      ...openaiHistory,
+    ],
+    stream_options: { include_usage: true },
   });
 
   const stream = new ReadableStream<Uint8Array>({
@@ -142,32 +146,28 @@ Esta es una respuesta de ejemplo sobre **${subject.name}**. Dime qué tema quier
       let inputTokens = 0;
       let outputTokens = 0;
       try {
-        for await (const event of anthropicStream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            const delta = event.delta.text;
+        for await (const chunk of openaiStream) {
+          const delta = chunk.choices[0]?.delta.content ?? "";
+          if (delta) {
             fullText += delta;
             controller.enqueue(encoder.encode(delta));
-          } else if (event.type === "message_delta" && event.usage) {
-            outputTokens = event.usage.output_tokens;
-          } else if (event.type === "message_start" && event.message.usage) {
-            inputTokens = event.message.usage.input_tokens;
+          }
+          if (chunk.usage) {
+            inputTokens = chunk.usage.prompt_tokens;
+            outputTokens = chunk.usage.completion_tokens;
           }
         }
       } catch (err) {
-        console.error("[api/ai/chat] anthropic stream error:", err);
+        console.error("[api/ai/chat] openai stream error:", err);
         controller.error(err);
         return;
       }
 
-      // Persist the assistant turn + refresh conversation.updatedAt.
       await db.insert(messages).values({
         conversationId,
         role: "assistant",
         content: { text: fullText },
-        model: MODEL,
+        model: OPENAI_MODEL,
         tokenUsage: { input: inputTokens, output: outputTokens },
       });
       await db
