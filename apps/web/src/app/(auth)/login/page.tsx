@@ -29,8 +29,14 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: trimmed,
         options: {
+          // Point at the /auth/confirm route handler so the magic link
+          // lands there and the server can call verifyOtp(). Supabase will
+          // append ?token_hash=…&type=… to this URL. Must match a
+          // Redirect URL in Supabase → Auth → URL Configuration.
           emailRedirectTo:
-            typeof window !== "undefined" ? `${window.location.origin}/onboarding` : undefined,
+            typeof window !== "undefined"
+              ? `${window.location.origin}/auth/confirm`
+              : undefined,
         },
       });
       if (error) {
@@ -52,8 +58,12 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
+        // Route through /api/auth/callback which exchanges the PKCE code
+        // for a session and then routes by membership state.
         redirectTo:
-          typeof window !== "undefined" ? `${window.location.origin}/onboarding` : undefined,
+          typeof window !== "undefined"
+            ? `${window.location.origin}/api/auth/callback`
+            : undefined,
       },
     });
     if (error) toast.error(error.message);

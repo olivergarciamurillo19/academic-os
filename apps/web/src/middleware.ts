@@ -6,13 +6,15 @@ export const config = {
     /*
      * Match all paths EXCEPT:
      *  - /login
+     *  - /auth/** (Supabase callbacks: /auth/confirm sets cookies via
+     *    verifyOtp and must run before the auth check)
      *  - /api/** (route handlers enforce auth themselves and must return
      *    JSON errors, not HTML redirects)
      *  - /_next/**
      *  - /favicon.ico
      *  - static file extensions.
      */
-    "/((?!login|api|_next|favicon\\.ico|.*\\.(?:png|jpg|svg|ico|css|js|woff2)$).*)",
+    "/((?!login|auth|api|_next|favicon\\.ico|.*\\.(?:png|jpg|svg|ico|css|js|woff2)$).*)",
   ],
 };
 
