@@ -21,7 +21,11 @@ export const costAlert = inngest.createFunction(
       return { skipped: true };
     }
 
-    type Row = { model: string; input_tokens: number; output_tokens: number };
+    interface Row extends Record<string, unknown> {
+      model: string;
+      input_tokens: number;
+      output_tokens: number;
+    }
     let rows: Row[] = [];
     try {
       const result = await db.execute<Row>(sql`
@@ -37,7 +41,7 @@ export const costAlert = inngest.createFunction(
     }
 
     let totalUsd = 0;
-    const breakdown: Array<{ model: string; usd: number }> = [];
+    const breakdown: { model: string; usd: number }[] = [];
     for (const r of rows) {
       const usd = estimateCostUsd(r.model as ModelId, r.input_tokens, r.output_tokens);
       totalUsd += usd;

@@ -45,7 +45,7 @@ export default async function IntegrationsPage() {
         <CardContent className="flex flex-col gap-4">
           <HowToBlock />
           <IcalIntegrationForm initial={ical} />
-          {ical && ical.isActive ? <StatusBlock ical={ical} /> : null}
+          {ical?.isActive ? <StatusBlock ical={ical} /> : null}
         </CardContent>
       </Card>
     </div>

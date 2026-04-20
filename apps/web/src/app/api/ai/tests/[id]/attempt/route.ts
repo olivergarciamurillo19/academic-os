@@ -54,7 +54,7 @@ export async function POST(
   const test = await db.query.generatedTests.findFirst({
     where: eq(generatedTests.id, id),
   });
-  if (!test || test.userId !== session.user.id) {
+  if (test?.userId !== session.user.id) {
     return Response.json({ error: "Test not found" }, { status: 404 });
   }
 
@@ -101,7 +101,7 @@ export async function POST(
       .where(eq(users.id, session.user.id))
       .limit(1);
 
-    const existing = (userRow[0]?.preferences ?? {}) as Record<string, unknown>;
+    const existing = userRow[0]?.preferences ?? {};
     const weakTopics = Array.isArray(existing.weakTopics)
       ? (existing.weakTopics as WeakTopicRecord[])
       : [];

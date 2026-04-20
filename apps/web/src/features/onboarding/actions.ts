@@ -81,7 +81,8 @@ export async function completeOnboarding(formData: FormData): Promise<void> {
   const selectedSubjectIds = formData.getAll("subjects").map(String);
   step3Schema.parse({ selectedSubjectIds });
 
-  const rawIcal = String(formData.get("icalUrl") ?? "").trim();
+  const rawIcalField = formData.get("icalUrl");
+  const rawIcal = typeof rawIcalField === "string" ? rawIcalField.trim() : "";
   const icalUrl = rawIcal.length > 0 ? rawIcal.replace(/^webcal:\/\//i, "https://") : null;
 
   const current = await readOnboardingState();
