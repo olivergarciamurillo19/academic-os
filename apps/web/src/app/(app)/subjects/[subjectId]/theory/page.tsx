@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResourceDropzone } from "@/features/materials/resource-dropzone";
 import { ResourceList } from "@/features/materials/resource-list";
-import { getSubjectById } from "@/features/subjects/mock-data";
+import { getSubjectByIdForActiveUser } from "@/features/subjects/queries";
 
 interface PageProps {
   params: Promise<{ subjectId: string }>;
@@ -11,7 +11,7 @@ interface PageProps {
 
 export default async function SubjectTheoryTab({ params }: PageProps) {
   const { subjectId } = await params;
-  const subject = getSubjectById(subjectId);
+  const subject = await getSubjectByIdForActiveUser(subjectId);
   if (!subject) notFound();
 
   return (
@@ -20,8 +20,7 @@ export default async function SubjectTheoryTab({ params }: PageProps) {
         <CardHeader>
           <CardTitle className="text-base">Material de teoría</CardTitle>
           <CardDescription>
-            Apuntes y guiones para {subject.name}. Se indexarán para el chat IA cuando Armando
-            conecte la ingestion.
+            Apuntes y guiones para {subject.name}.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { CalendarPageClient } from "@/features/calendar/calendar-page-client";
-import { getSubjectById } from "@/features/subjects/mock-data";
+import { getSubjectByIdForActiveUser } from "@/features/subjects/queries";
 
 interface PageProps {
   params: Promise<{ subjectId: string }>;
@@ -9,7 +9,7 @@ interface PageProps {
 
 export default async function SubjectCalendarTab({ params }: PageProps) {
   const { subjectId } = await params;
-  const subject = getSubjectById(subjectId);
+  const subject = await getSubjectByIdForActiveUser(subjectId);
   if (!subject) notFound();
 
   return <CalendarPageClient subjectId={subject.id} />;

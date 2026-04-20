@@ -7,7 +7,8 @@ import {
   SubjectsFilterPills,
   type SemesterFilter,
 } from "@/features/subjects/filter-pills";
-import { getCurrentSemester, mockSubjects } from "@/features/subjects/mock-data";
+import { getCurrentSemester } from "@/features/subjects/mock-data";
+import { listSubjectsForActiveUser } from "@/features/subjects/queries";
 import { SubjectCard } from "@/features/subjects/subject-card";
 
 export const metadata: Metadata = {
@@ -29,14 +30,16 @@ export default async function SubjectsPage({
   const filter = normalizeFilter(params.semester);
   const semester = filter === "all" ? null : filter;
 
+  const allSubjects = await listSubjectsForActiveUser();
+
   const filtered = semester
-    ? mockSubjects.filter((s) => s.semester === semester)
-    : mockSubjects;
+    ? allSubjects.filter((s) => s.semester === semester)
+    : allSubjects;
 
   const counts: Record<SemesterFilter, number> = {
-    all: mockSubjects.length,
-    "1Q": mockSubjects.filter((s) => s.semester === "1Q").length,
-    "2Q": mockSubjects.filter((s) => s.semester === "2Q").length,
+    all: allSubjects.length,
+    "1Q": allSubjects.filter((s) => s.semester === "1Q").length,
+    "2Q": allSubjects.filter((s) => s.semester === "2Q").length,
   };
 
   const current = getCurrentSemester();
@@ -47,7 +50,7 @@ export default async function SubjectsPage({
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Asignaturas</h1>
           <p className="text-sm text-muted-foreground">
-            {mockSubjects.length} asignaturas en tu matrícula · cuatrimestre actual {current}
+            {allSubjects.length} asignaturas en tu matrícula · cuatrimestre actual {current}
           </p>
         </div>
         <SubjectsFilterPills current={filter} counts={counts} />

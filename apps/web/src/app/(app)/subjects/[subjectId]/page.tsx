@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatSubjectEvent } from "@/features/subjects/format";
-import { getSubjectById } from "@/features/subjects/mock-data";
+import { getSubjectByIdForActiveUser } from "@/features/subjects/queries";
 
 interface PageProps {
   params: Promise<{ subjectId: string }>;
@@ -11,7 +11,7 @@ interface PageProps {
 
 export default async function SubjectOverview({ params }: PageProps) {
   const { subjectId } = await params;
-  const subject = getSubjectById(subjectId);
+  const subject = await getSubjectByIdForActiveUser(subjectId);
   if (!subject) notFound();
 
   const next = subject.nextEvent ? formatSubjectEvent(subject.nextEvent.whenISO) : null;

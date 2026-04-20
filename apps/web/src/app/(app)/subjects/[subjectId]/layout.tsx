@@ -10,7 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { getSubjectById } from "@/features/subjects/mock-data";
+import { getSubjectByIdForActiveUser } from "@/features/subjects/queries";
 import { SubjectHeader } from "@/features/subjects/subject-header";
 import { SubjectTabs, type SubjectTab } from "@/features/subjects/subject-tabs";
 
@@ -21,7 +21,7 @@ interface LayoutProps {
 
 export default async function SubjectDetailLayout({ params, children }: LayoutProps) {
   const { subjectId } = await params;
-  const subject = getSubjectById(subjectId);
+  const subject = await getSubjectByIdForActiveUser(subjectId);
   if (!subject) notFound();
 
   const base = `/subjects/${subject.id}` as const;
