@@ -98,8 +98,22 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <UpcomingEventsCard events={data.upcomingEvents} />
-        <PendingTasksCard tasks={data.pendingTasks} />
+        <Link
+          href={{ pathname: "/calendar" }}
+          prefetch
+          aria-label="Ir al calendario"
+          className="group rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <UpcomingEventsCard events={data.upcomingEvents} />
+        </Link>
+        <Link
+          href={{ pathname: "/tasks" }}
+          prefetch
+          aria-label="Ir a tareas"
+          className="group rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <PendingTasksCard tasks={data.pendingTasks} />
+        </Link>
         <RecentChatCard conversation={data.recentConversation} />
       </div>
 
@@ -118,8 +132,14 @@ export default async function DashboardPage() {
         {quickLinks.map((link) => {
           const Icon = link.icon;
           return (
-            <Link key={link.href} href={link.href} className="group">
-              <Card className="h-full transition-colors group-hover:border-primary/60">
+            <Link
+              key={link.href}
+              href={link.href}
+              prefetch
+              aria-label={link.title}
+              className="group rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Card className="h-full cursor-pointer transition-colors group-hover:border-primary/60">
                 <CardHeader className="gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Icon className="h-5 w-5" />
@@ -140,7 +160,7 @@ export default async function DashboardPage() {
 
 function UpcomingEventsCard({ events }: { events: readonly UpcomingEvent[] }) {
   return (
-    <Card>
+    <Card className="h-full cursor-pointer transition-colors group-hover:border-primary/60">
       <CardHeader className="gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
           <CalendarClock className="h-4 w-4" />
@@ -173,7 +193,7 @@ function UpcomingEventsCard({ events }: { events: readonly UpcomingEvent[] }) {
 
 function PendingTasksCard({ tasks }: { tasks: readonly PendingTask[] }) {
   return (
-    <Card>
+    <Card className="h-full cursor-pointer transition-colors group-hover:border-primary/60">
       <CardHeader className="gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
           <CheckSquare className="h-4 w-4" />
@@ -323,35 +343,42 @@ function RecentChatCard({
 }: {
   conversation: RecentConversation | null;
 }) {
+  const href = conversation
+    ? (`/subjects/${conversation.subjectId}/chat` as const)
+    : ("/subjects" as const);
   return (
-    <Card>
-      <CardHeader className="gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <MessageSquare className="h-4 w-4" />
-        </span>
-        <CardTitle className="text-base">Chat IA</CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm">
-        {conversation ? (
-          <Link
-            href={{ pathname: `/subjects/${conversation.subjectId}/chat` }}
-            className="flex flex-col gap-1 hover:underline"
-          >
-            <span className="font-medium">{conversation.title}</span>
-            <span className="text-xs text-muted-foreground">
-              {conversation.subjectName ?? "Sin asignatura"} ·{" "}
-              <time dateTime={conversation.updatedAt.toISOString()}>
-                {format(conversation.updatedAt, "d MMM HH:mm", { locale: es })}
-              </time>
-            </span>
-          </Link>
-        ) : (
-          <p className="flex items-center gap-2 text-muted-foreground">
-            <Sparkles className="h-4 w-4" />
-            Sin conversaciones aún. Pregúntame sobre cualquier asignatura.
-          </p>
-        )}
-      </CardContent>
-    </Card>
+    <Link
+      href={{ pathname: href }}
+      prefetch
+      aria-label={conversation ? "Continuar conversación" : "Ir a asignaturas"}
+      className="group rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Card className="h-full cursor-pointer transition-colors group-hover:border-primary/60">
+        <CardHeader className="gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <MessageSquare className="h-4 w-4" />
+          </span>
+          <CardTitle className="text-base">Chat IA</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm">
+          {conversation ? (
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">{conversation.title}</span>
+              <span className="text-xs text-muted-foreground">
+                {conversation.subjectName ?? "Sin asignatura"} ·{" "}
+                <time dateTime={conversation.updatedAt.toISOString()}>
+                  {format(conversation.updatedAt, "d MMM HH:mm", { locale: es })}
+                </time>
+              </span>
+            </div>
+          ) : (
+            <p className="flex items-center gap-2 text-muted-foreground">
+              <Sparkles className="h-4 w-4" />
+              Sin conversaciones aún. Pregúntame sobre cualquier asignatura.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
