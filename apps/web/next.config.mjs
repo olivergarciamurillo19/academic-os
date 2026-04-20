@@ -4,6 +4,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
+  transpilePackages: [
+    "@academic-os/ai",
+    "@academic-os/auth",
+    "@academic-os/db",
+    "@academic-os/email",
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
@@ -14,6 +20,16 @@ const nextConfig = {
       { protocol: "https", hostname: "*.supabase.co" },
       { protocol: "https", hostname: "*.supabase.in" },
     ],
+  },
+  webpack: (config) => {
+    // Resolve bundler-style '.js' imports inside workspace TS packages
+    // (packages/db re-exports './client.js' etc.) to their .ts sources.
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias ?? {}),
+      ".js": [".ts", ".tsx", ".js"],
+      ".mjs": [".mts", ".mjs"],
+    };
+    return config;
   },
 };
 
