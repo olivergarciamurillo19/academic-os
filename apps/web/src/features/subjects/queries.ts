@@ -40,6 +40,7 @@ function rowToUi(row: SubjectRow): MockSubject {
     credits: row.credits ?? 6,
     semester: semesterOf(row),
     colorIndex: colorIndexFor(row.code),
+    color: row.color ?? undefined,
     // nextEvent left undefined — wired once the events table is queryable
     // in the subject scope (next issue after this one).
   };

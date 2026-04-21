@@ -1,4 +1,4 @@
-import { ChevronRight, Cog, LinkIcon, UserCircle } from "lucide-react";
+import { ChevronRight, Cog, LinkIcon, Palette, UserCircle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -14,6 +14,12 @@ const sections = [
     description: "Tu nombre y datos visibles en la app.",
     href: "/settings/profile" as const,
     icon: UserCircle,
+  },
+  {
+    title: "Apariencia",
+    description: "Color, fuente y densidad de la app.",
+    href: "/settings/appearance" as const,
+    icon: Palette,
   },
   {
     title: "Integraciones",

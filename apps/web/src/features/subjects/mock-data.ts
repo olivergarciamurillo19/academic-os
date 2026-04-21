@@ -16,6 +16,8 @@ export interface MockSubject {
   semester: SubjectSemester;
   /** Index into --color-subject-{1..10} palette. */
   colorIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  /** Hex color stored in subjects.color (overrides colorIndex when present). */
+  color?: string;
   /** Mock next event — placeholder until calendar sync is wired. */
   nextEvent?: {
     label: string;
