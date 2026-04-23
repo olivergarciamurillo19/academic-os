@@ -1,0 +1,21 @@
+{
+  "extends": "@academic-os/config-ts/next.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ui/*": ["../../packages/ui/src/*"],
+      "@db/*": ["../../packages/db/src/*"],
+      "@ai/*": ["../../packages/ai/src/*"],
+      "@shared/*": ["../../packages/shared/src/*"],
+      "@integrations/*": ["../../packages/integrations/src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}

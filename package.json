@@ -1,0 +1,46 @@
+{
+  "name": "academic-os",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Academic OS — sistema operativo académico para la UAL y más allá.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "db:generate": "turbo run db:generate --filter=@academic-os/db",
+    "db:migrate": "turbo run db:migrate --filter=@academic-os/db",
+    "db:push": "turbo run db:push --filter=@academic-os/db",
+    "db:studio": "turbo run db:studio --filter=@academic-os/db",
+    "db:seed": "turbo run db:seed --filter=@academic-os/db"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.1",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "unrs-resolver",
+      "esbuild",
+      "@sentry/cli",
+      "core-js"
+    ]
+  }
+}
