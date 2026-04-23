@@ -5,7 +5,7 @@ export const config = {
   matcher: [
     /*
      * Match all paths EXCEPT:
-     *  - /login
+     *  - /login, /forgot-password, /reset-password (password auth flow)
      *  - /auth/** (Supabase callbacks: /auth/confirm sets cookies via
      *    verifyOtp and must run before the auth check)
      *  - /api/** (route handlers enforce auth themselves and must return
@@ -14,7 +14,7 @@ export const config = {
      *  - /favicon.ico
      *  - static file extensions.
      */
-    "/((?!login|auth|api|_next|favicon\\.ico|.*\\.(?:png|jpg|svg|ico|css|js|woff2)$).*)",
+    "/((?!login|forgot-password|reset-password|auth|api|_next|favicon\\.ico|.*\\.(?:png|jpg|svg|ico|css|js|woff2)$).*)",
   ],
 };
 

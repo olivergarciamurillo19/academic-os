@@ -1,6 +1,7 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -9,33 +10,63 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [pending, setPending] = useState(false);
+  const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
 
-  async function sendMagicLink(e: React.FormEvent<HTMLFormElement>) {
+  const [signinEmail, setSigninEmail] = useState("");
+  const [signinPassword, setSigninPassword] = useState("");
+  const [signinPending, setSigninPending] = useState(false);
+
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupPending, setSignupPending] = useState(false);
+
+  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const trimmed = email.trim();
-    if (trimmed.length === 0) return;
     if (!isSupabaseConfigured()) {
       toast.error("Supabase no configurado todavía en este entorno.");
       return;
     }
-    setPending(true);
+    setSigninPending(true);
     try {
       const supabase = getBrowserSupabase();
-      // Hard-pin the canonical app URL. If the user lands on a preview
-      // deployment the page origin would differ from the canonical alias
-      // in Supabase's Redirect URL allowlist, which rejects the link.
+      const { error } = await supabase.auth.signInWithPassword({
+        email: signinEmail.trim(),
+        password: signinPassword,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      router.replace("/dashboard");
+      router.refresh();
+    } finally {
+      setSigninPending(false);
+    }
+  }
+
+  async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!isSupabaseConfigured()) {
+      toast.error("Supabase no configurado todavía en este entorno.");
+      return;
+    }
+    if (signupPassword.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    setSignupPending(true);
+    try {
+      const supabase = getBrowserSupabase();
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://academic-os-mu.vercel.app";
-      const { error } = await supabase.auth.signInWithOtp({
-        email: trimmed,
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail.trim(),
+        password: signupPassword,
         options: {
-          // Points at /auth/confirm — the route handler that calls
-          // verifyOtp() and writes the session cookies. Must match a
-          // Redirect URL in Supabase → Auth → URL Configuration exactly.
           emailRedirectTo: `${appUrl}/auth/confirm`,
         },
       });
@@ -43,28 +74,17 @@ export default function LoginPage() {
         toast.error(error.message);
         return;
       }
-      toast.success("Te he enviado un enlace de acceso. Revisa tu correo.");
+      if (data.session) {
+        router.replace("/onboarding");
+        router.refresh();
+        return;
+      }
+      toast.success("Cuenta creada. Revisa tu correo para confirmarla.");
+      setMode("signin");
+      setSigninEmail(signupEmail.trim());
     } finally {
-      setPending(false);
+      setSignupPending(false);
     }
-  }
-
-  async function signInWithGoogle() {
-    if (!isSupabaseConfigured()) {
-      toast.error("Supabase no configurado todavía en este entorno.");
-      return;
-    }
-    const supabase = getBrowserSupabase();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://academic-os-mu.vercel.app";
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        // Route through /api/auth/callback which exchanges the PKCE code
-        // for a session and then routes by membership state.
-        redirectTo: `${appUrl}/api/auth/callback`,
-      },
-    });
-    if (error) toast.error(error.message);
   }
 
   return (
@@ -75,42 +95,86 @@ export default function LoginPage() {
 
       <Card>
         <CardHeader className="gap-2">
-          <CardTitle className="text-xl">Entra en Academic OS</CardTitle>
-          <CardDescription>
-            Te enviamos un enlace mágico por email. Sin contraseñas.
-          </CardDescription>
+          <CardTitle className="text-xl">Academic OS</CardTitle>
+          <CardDescription>Entra con tu correo y contraseña.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <form onSubmit={(e) => void sendMagicLink(e)} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Correo</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="tu@correo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" disabled={pending} className="w-full">
-              <Mail className="mr-2 h-4 w-4" />
-              {pending ? "Enviando…" : "Enviar enlace mágico"}
-            </Button>
-          </form>
+        <CardContent>
+          <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Entrar</TabsTrigger>
+              <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
+            </TabsList>
 
-          <div className="relative my-1 text-center text-xs text-muted-foreground">
-            <span className="bg-card px-2">o</span>
-            <span
-              aria-hidden="true"
-              className="absolute inset-x-0 top-1/2 -z-10 h-px bg-border"
-            />
-          </div>
+            <TabsContent value="signin" className="mt-4">
+              <form onSubmit={(e) => void handleSignIn(e)} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="signin-email">Correo</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="tu@correo.com"
+                    value={signinEmail}
+                    onChange={(e) => setSigninEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="signin-password">Contraseña</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={signinPassword}
+                    onChange={(e) => setSigninPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={signinPending} className="w-full">
+                  {signinPending ? "Entrando…" : "Entrar"}
+                </Button>
+                <Link
+                  href="/forgot-password"
+                  className="text-center text-xs text-muted-foreground hover:text-foreground"
+                >
+                  ¿Has olvidado la contraseña?
+                </Link>
+              </form>
+            </TabsContent>
 
-          <Button variant="outline" className="w-full" onClick={() => void signInWithGoogle()}>
-            Continuar con Google
-          </Button>
+            <TabsContent value="signup" className="mt-4">
+              <form onSubmit={(e) => void handleSignUp(e)} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="signup-email">Correo</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="tu@correo.com"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="signup-password">Contraseña</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    required
+                  />
+                  <span className="text-xs text-muted-foreground">Mínimo 8 caracteres.</span>
+                </div>
+                <Button type="submit" disabled={signupPending} className="w-full">
+                  {signupPending ? "Creando…" : "Crear cuenta"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

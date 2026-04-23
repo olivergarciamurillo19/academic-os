@@ -79,9 +79,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   // `next` lets a caller pin where the user lands (e.g. back to a
-  // specific subject). Default sends fresh users to onboarding; the
-  // middleware then redirects to /dashboard if they already have a
-  // membership (see active_cohort_id cookie path).
-  const destination = next?.startsWith("/") === true ? next : "/onboarding";
+  // specific subject). Recovery links default to the reset-password form
+  // so the user can set a new password. Other types fall through to
+  // onboarding; middleware redirects to /dashboard if they already have
+  // a membership (see active_cohort_id cookie path).
+  const fallback = type === "recovery" ? "/reset-password" : "/onboarding";
+  const destination = next?.startsWith("/") === true ? next : fallback;
   return NextResponse.redirect(new URL(destination, origin));
 }

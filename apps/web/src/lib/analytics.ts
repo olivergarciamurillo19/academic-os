@@ -8,7 +8,7 @@
 import posthog from "posthog-js";
 
 export type AnalyticsEvent =
-  | { name: "user_signed_up"; payload: { method: "google" | "magic_link" } }
+  | { name: "user_signed_up"; payload: { method: "password" } }
   | { name: "onboarding_completed"; payload: { subjectCount: number } }
   | { name: "subject_opened"; payload: { subjectId: string } }
   | {

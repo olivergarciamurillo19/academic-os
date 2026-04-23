@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("auth · login page", () => {
-  test("renders magic link and google buttons", async ({ page }) => {
+  test("renders email + password form", async ({ page }) => {
     await page.goto("/login");
     await expect(page).toHaveURL(/\/login/);
-    // Email input for magic link
-    await expect(page.getByRole("textbox", { name: /email/i })).toBeVisible();
-    // At least one submit button
+    await expect(page.getByLabel(/correo/i).first()).toBeVisible();
+    await expect(page.getByLabel(/contraseña/i).first()).toBeVisible();
     const buttons = page.getByRole("button");
     await expect(buttons.first()).toBeVisible();
   });
